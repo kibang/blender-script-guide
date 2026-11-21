@@ -9,7 +9,7 @@ var T = {
  all: ["전체", "All"], level: ["난이도", "Difficulty"], category: ["분류", "Category"], results: ["개", "results"],
  verified: ["Blender 5.3에서 실제 실행·검증됨", "Run & verified in Blender 5.3"], copy: ["코드 복사", "Copy code"], copied: ["복사됨!", "Copied!"],
  howto: ["실행 방법", "How to run"], before: ["실행 전", "Before"], after: ["실행 후", "After"], steps: ["중간 단계", "Intermediate steps"],
- ex_title: ["코드 해설", "Code walkthrough"], ex_sum: ["한 줄 요약", "In one line"], ex_blocks: ["블록별 설명", "Block by block"], ex_apis: ["핵심 bpy API", "Key bpy APIs"],
+ ex_title: ["코드 해설", "Code walkthrough"], pyg: ["📘 파이썬·bpy 용어 사전", "📘 Python & bpy glossary"], newterms: ["처음 나오는 용어", "New here"], beg_on: ["초보자 설명 모두 펼치기", "Expand all beginner notes"], beg_off: ["초보자 설명 접기", "Collapse beginner notes"], usedin: ["쓰인 스크립트", "Used in"], gcat_mod: ["모듈", "Modules"], gcat_py: ["파이썬 문법", "Python"], gcat_bpy: ["블렌더 bpy", "Blender bpy"], ex_sum: ["한 줄 요약", "In one line"], ex_blocks: ["블록별 설명", "Block by block"], ex_apis: ["핵심 bpy API", "Key bpy APIs"],
  ex_tweak: ["바꿔 볼 값", "What to tweak"], ex_pit: ["주의할 점", "Pitfalls"], ex_line: ["줄", "line"], ex_lines: ["줄", "lines"],
  ex_hint: ["줄 번호 칩을 누르면 위 코드에서 그 줄이 강조돼요. 코드 줄을 눌러도 해당 설명으로 이동합니다.", "Tap a line chip to highlight those lines in the code above; tapping a code line jumps to its explanation."],
  back: ["← 목록", "← List"], code: ["코드", "Code"], result: ["결과 이미지", "Result images"], what: ["무엇을 하나요?", "What it does"],
@@ -24,7 +24,7 @@ var T = {
  acc_title: ["정확도 (솔직하게)", "Accuracy (honestly)"], ai_title: ["🤖 AI로 분석하기 (선택)", "🤖 Analyse with AI (optional)"],
  gallery_intro: ["Blender 5.3의 Shift+A(추가) 메뉴에 있는 모든 항목을 실제로 하나씩 추가해서 찍은 화면이에요. 각 항목이 어디에 좋은지 함께 적었어요.", "Every item of the Shift+A (Add) menu in Blender 5.3, added one by one and captured from the real viewport, with what each is good for."],
  menu_shots: ["실제 Shift+A 메뉴 화면", "The real Shift+A menu"], prims: ["시작 도형", "Starting primitives"], open_example: ["예제 열기 →", "Open example →"],
- step: ["단계", "Step"], notdone: ["실패", "failed"], lvl_names: [["", "입문", "기초", "중급", "고급", "전문"], ["", "Beginner", "Basic", "Intermediate", "Advanced", "Expert"]]
+ step: ["단계", "Step"], how: ["어떻게? (모드·키·메뉴·값)", "How? (mode · keys · menu · values)"], sub_keys: ["⌨️ 단축키·메뉴 사전", "⌨️ Shortcuts & menus"], sub_starts: ["🌀 시작 타입별 예제 (Shift+A)", "🌀 By start type (Shift+A)"], notdone: ["실패", "failed"], lvl_names: [["", "입문", "기초", "중급", "고급", "전문"], ["", "Beginner", "Basic", "Intermediate", "Advanced", "Expert"]]
 };
 var CAT = {naming: ["이름 정리", "Naming"], select: ["선택", "Selection"], transform: ["배치·변형", "Transform"], mesh: ["메시 편집", "Mesh"], modifier: ["모디파이어", "Modifiers"],
  material: ["머티리얼", "Materials"], light: ["조명", "Lighting"], camera: ["카메라", "Camera"], render: ["렌더", "Render"], anim: ["애니메이션", "Animation"], io: ["가져오기·내보내기", "Import/Export"],

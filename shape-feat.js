@@ -315,35 +315,58 @@ function match(f, lib, topN){
 function hints(f){
   var H = [];
   var lathe = f.symLR > 0.92 && f.convex > 0.6 && Math.abs(f.aspect) > 0.15;  // thresholds tuned on the dev photo split (tools/tune.js)
-  if(f.fill > 0.9 && f.convex > 0.95) H.push({k: "box", ko: "네모난 상자형 → Cube에서 시작", en: "Boxy → start from a Cube",
+  if(f.fill > 0.9 && f.convex > 0.95) H.push({k: "box", how_ko: "Object Mode Shift+A › Mesh › Cube → Tab → A → S → X/Y/Z → 값 → Enter → 2(선 모드) 모서리 선택 → Ctrl+B (Edge › Bevel Edges)", how_en: "Object Mode Shift+A › Mesh › Cube → Tab → A → S → X/Y/Z → value → Enter → 2 (edge mode) select edges → Ctrl+B (Edge › Bevel Edges)", ko: "네모난 상자형 → Cube에서 시작", en: "Boxy → start from a Cube",
     basic_ko: "Cube → Edit Mode에서 S로 비율 맞추기 → Ctrl+B 모서리", basic_en: "Cube → scale (S) in Edit Mode → Ctrl+B edges",
     mod_ko: "Cube + Bevel 모디파이어 (+ Subdivision으로 부드럽게)", mod_en: "Cube + Bevel modifier (+ Subdivision for softness)"});
-  if(Math.abs(f.aspect) < 0.2 && f.fill > 0.72 && f.fill < 0.84 && f.convex > 0.93) H.push({k: "round", ko: "둥근 덩어리 → UV/Quad Sphere", en: "Round → UV / Quad Sphere",
+  if(Math.abs(f.aspect) < 0.2 && f.fill > 0.72 && f.fill < 0.84 && f.convex > 0.93) H.push({k: "round", how_ko: "Shift+A › Mesh › UV Sphere → Tab → 1(점 모드) → Alt+클릭으로 한 줄 선택 → S → Shift+Z → 값", how_en: "Shift+A › Mesh › UV Sphere → Tab → 1 (vertex mode) → Alt+click a ring → S → Shift+Z → value", ko: "둥근 덩어리 → UV/Quad Sphere", en: "Round → UV / Quad Sphere",
     basic_ko: "UV Sphere → 점 그룹 Scale로 눌러 모양 잡기", basic_en: "UV Sphere → scale vertex groups to squash",
-    mod_ko: "Quad Sphere(저해상도) + Subdivision + Cast", mod_en: "Low-res Quad Sphere + Subdivision + Cast"});
-  if(lathe) H.push({k: "lathe", ko: "좌우 대칭 회전체 → 단면 + 회전", en: "Symmetric lathe shape → profile + revolve",
+    mod_ko: "Quad Sphere(저해상도) + Subdivision Surface(Ctrl+2) + Cast(Shape Sphere)", mod_en: "Low-res Quad Sphere + Subdivision Surface (Ctrl+2) + Cast (Shape Sphere)"});
+  if(lathe) H.push({k: "lathe", how_ko: "Shift+A › Mesh › Plane → Tab → A → M › At Center → 1 → E → X/Z 값으로 단면 그리기 → A → Alt+E › Spin → F9 Steps 32, Angle 360°, Axis (0,0,1) → M › By Distance", how_en: "Shift+A › Mesh › Plane → Tab → A → M › At Center → 1 → E with X/Z values to draw the profile → A → Alt+E › Spin → F9 Steps 32, Angle 360°, Axis (0,0,1) → M › By Distance", ko: "좌우 대칭 회전체 → 단면 + 회전", en: "Symmetric lathe shape → profile + revolve",
     basic_ko: "점 하나에서 E로 단면 그리기 → Spin 도구 360°", basic_en: "Draw the profile from one vertex with E → Spin tool 360°",
     mod_ko: "단면 선 + Screw 모디파이어 + Solidify", mod_en: "Profile curve + Screw modifier + Solidify"});
-  if(f.symLR > 0.85 && !lathe) H.push({k: "mirror", ko: "좌우 대칭 → 반만 만들기", en: "Mirror symmetric → model half",
+  if(f.symLR > 0.85 && !lathe) H.push({k: "mirror", how_ko: "Edit Mode에서 반쪽 지우기(X › Vertices) → 반쪽 완성 → A → Shift+D → 우클릭 → Ctrl+M → X (피벗: . › 3D Cursor, 커서는 월드 중심) → M › By Distance", how_en: "In Edit Mode delete one half (X › Vertices) → finish the half → A → Shift+D → right-click → Ctrl+M → X (피벗: . › 3D Cursor, 커서는 월드 중심) → M › By Distance", ko: "좌우 대칭 → 반만 만들기", en: "Mirror symmetric → model half",
     basic_ko: "반쪽 완성 후 Shift+D 복제 → Mirror(Ctrl+M) → 점 Merge", basic_en: "Finish one half, Shift+D, mirror (Ctrl+M) and merge verts",
     mod_ko: "반쪽 + Mirror 모디파이어(Clipping 켜기)", mod_en: "Half + Mirror modifier (Clipping on)"});
-  if(f.holes > 0 && f.holeFrac > 0.19) H.push({k: "hole", ko: "구멍이 있음 (" + f.holes + "개)", en: "Has holes (" + f.holes + ")",
+  if(f.holes > 0 && f.holeFrac > 0.19) H.push({k: "hole", how_ko: "3(면 모드) 구멍 낼 면 선택 → I(Face › Inset Faces) → X › Faces → 앞뒤 고리 선택 → Edge › Bridge Edge Loops", how_en: "3 (face mode) select the face → I (Face › Inset Faces) → X › Faces → select both loops → Edge › Bridge Edge Loops", ko: "구멍이 있음 (" + f.holes + "개)", en: "Has holes (" + f.holes + ")",
     basic_ko: "면 Inset(I) → 구멍 면 삭제 → Bridge Edge Loops로 벽 잇기", basic_en: "Inset (I) → delete the hole face → Bridge Edge Loops",
     mod_ko: "커터 오브젝트 + Boolean(Difference), 고리 모양이면 Torus", mod_en: "Cutter object + Boolean (Difference); ring-like → Torus"});
-  if(f.rep > 0.9) H.push({k: "repeat", ko: "같은 부품이 반복됨", en: "Repeating parts",
+  if(f.rep > 0.9) H.push({k: "repeat", how_ko: "Object Mode에서 부품 선택 → Shift+D → X/Y/Z → 간격 → Enter → Shift+R로 반복", how_en: "Object Mode select the part → Shift+D → X/Y/Z → spacing → Enter → Shift+R to repeat", ko: "같은 부품이 반복됨", en: "Repeating parts",
     basic_ko: "하나 만들고 Shift+D 반복 (Shift+R로 마지막 동작 반복)", basic_en: "Make one, Shift+D repeatedly (Shift+R repeats last)",
     mod_ko: "하나 + Array 모디파이어 (개수·간격을 숫자로)", mod_en: "One piece + Array modifier (count/spacing as numbers)"});
-  if(Math.abs(f.taper) > 0.5) H.push({k: "taper", ko: f.taper > 0 ? "위가 넓고 아래가 좁음" : "아래가 넓고 위가 좁음", en: f.taper > 0 ? "Wider at the top" : "Wider at the bottom",
+  if(Math.abs(f.taper) > 0.5) H.push({k: "taper", how_ko: "3(면 모드) 윗면 선택 → E → 값 → Enter → S → 값 → Enter (반복)", how_en: "3 (face mode) select the top face → E → value → Enter → S → value → Enter (repeat)", ko: f.taper > 0 ? "위가 넓고 아래가 좁음" : "아래가 넓고 위가 좁음", en: f.taper > 0 ? "Wider at the top" : "Wider at the bottom",
     basic_ko: "윗(아랫)면 선택 → Extrude + Scale 반복", basic_en: "Select the top (bottom) face → extrude + scale repeatedly",
     mod_ko: "Simple Deform(Taper) 모디파이어", mod_en: "Simple Deform (Taper) modifier"});
-  if(f.convex < 0.7 && f.holes === 0) H.push({k: "parts", ko: "튀어나온 부분이 많음 (팔·다리·가지)", en: "Many protrusions (arms, legs, branches)",
+  if(f.convex < 0.7 && f.holes === 0) H.push({k: "parts", how_ko: "Ctrl+R로 자리 만들기 → 3(면 모드) 옆면 선택 → E → 값 → Enter (가지마다)", how_en: "Ctrl+R for placement loops → 3 (face mode) select side faces → E → value → Enter (per limb)", ko: "튀어나온 부분이 많음 (팔·다리·가지)", en: "Many protrusions (arms, legs, branches)",
     basic_ko: "몸통에서 옆면 골라 Extrude로 뽑아내기 (+ Loop Cut으로 자리 만들기)", basic_en: "Extrude limbs from side faces (+ loop cuts for placement)",
     mod_ko: "부품을 따로 만들고 Mirror/Array, 부드럽게는 Subdivision", mod_en: "Separate parts with Mirror/Array, Subdivision for softness"});
-  if(f.complex > 3.2) H.push({k: "detail", ko: "외곽이 복잡함 → 큰 덩어리부터", en: "Complex outline → block out big masses first",
+  if(f.complex > 3.2) H.push({k: "detail", how_ko: "큰 덩어리를 Cube로 → Tab → K(Knife)로 선 긋기 → Enter → E/I로 디테일", how_en: "Block out with Cubes → Tab → K (Knife) to cut lines → Enter → E/I for details", ko: "외곽이 복잡함 → 큰 덩어리부터", en: "Complex outline → block out big masses first",
     basic_ko: "큰 덩어리만 먼저(박스 모델링) → Knife(K)로 디테일", basic_en: "Block out big masses first, then Knife (K) for details",
     mod_ko: "덩어리 + Remesh/Displace, 세부는 따로", mod_en: "Masses + Remesh/Displace, details separately"});
   return H;
 }
-var API = {REFINE: REFINE, segment: segment, features: features, distance: distance, match: match, hints: hints, G: G, W8: W8};
+/* ---------- "is this a busy scene?" cue (offline, honest: a cue, not object detection) ----------
+   regions = colour patches (3-bit/channel, 4-connected) bigger than 0.1% of the image; bsd = spread of the border colours;
+   area = object-mask share of the frame. Busy, many-patch pictures with a non-plain border and a small single mask are
+   flagged. On the 105 single-object test photos this flags 3 (cactus_2, ladder_1, snowman_2) — so it only *asks* the user. */
+function complexity(rgba, W, H, mask){
+  var n = W * H, q = new Int16Array(n), lab = new Int32Array(n), i, x, y;
+  for(i = 0; i < n; i++){ q[i] = (rgba[i * 4] >> 5) * 64 + (rgba[i * 4 + 1] >> 5) * 8 + (rgba[i * 4 + 2] >> 5); lab[i] = -1; }
+  var stack = new Int32Array(n), regions = 0, nc = 0;
+  for(i = 0; i < n; i++){
+    if(lab[i] >= 0) continue; var sp = 0, a = 0; stack[sp++] = i; lab[i] = nc;
+    while(sp){ var j = stack[--sp]; a++; var jx = j % W, jy = (j / W) | 0;
+      if(jx > 0 && lab[j - 1] < 0 && q[j - 1] === q[j]){ lab[j - 1] = nc; stack[sp++] = j - 1; }
+      if(jx < W - 1 && lab[j + 1] < 0 && q[j + 1] === q[j]){ lab[j + 1] = nc; stack[sp++] = j + 1; }
+      if(jy > 0 && lab[j - W] < 0 && q[j - W] === q[j]){ lab[j - W] = nc; stack[sp++] = j - W; }
+      if(jy < H - 1 && lab[j + W] < 0 && q[j + W] === q[j]){ lab[j + W] = nc; stack[sp++] = j + W; } }
+    if(a > 0.001 * n) regions++; nc++;
+  }
+  var br = []; for(x = 0; x < W; x++){ br.push(x, (H - 1) * W + x); } for(y = 0; y < H; y++){ br.push(y * W, y * W + W - 1); }
+  var mu = [0, 0, 0]; br.forEach(function(k){ for(var c = 0; c < 3; c++) mu[c] += rgba[k * 4 + c]; }); mu = mu.map(function(v){ return v / br.length; });
+  var sd = 0; br.forEach(function(k){ for(var c = 0; c < 3; c++) sd += Math.pow(rgba[k * 4 + c] - mu[c], 2); }); sd = Math.sqrt(sd / br.length / 3);
+  var area = 0; if(mask) for(i = 0; i < n; i++) area += mask[i]; area /= n;
+  return {regions: regions, bsd: Math.round(sd * 10) / 10, area: Math.round(area * 100) / 100, likely: regions >= 80 && sd >= 30 && area <= 0.2};
+}
+var API = {complexity: complexity, REFINE: REFINE, segment: segment, features: features, distance: distance, match: match, hints: hints, G: G, W8: W8};
 if(typeof module !== "undefined" && module.exports) module.exports = API; else root.ShapeFeat = API;
 })(typeof window !== "undefined" ? window : this);

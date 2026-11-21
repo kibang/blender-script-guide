@@ -37,15 +37,38 @@ function hlLines(code){
   }).join("");
 }
 function rng(s){ var p = String(s).split("-"); return [+p[0], +(p[1] || p[0])]; }
+/* ---- beginner glossary (Python + bpy): first-use notes, inline hover links, glossary page ---- */
+var PYG = {}; (D.pyg || []).forEach(function(g){ PYG[g.id] = g; });
+function pg(g, k){ return L === "en" ? g[k][1] : g[k][0]; }
+function tn(g){ return g.tn ? (L === "en" ? g.tn[1] : g.tn[0]) : g.term; }
+function tl(id, label){ var g = PYG[id]; return g ? '<a class="tl" href="#scripts/glossary/' + id + '" title="' + esc(pg(g, "s")) + '">' + label + "</a>" : label; }
+var KW = {bpy: ["bpy"], math: ["math"], os: ["os"], mathutils: ["mathutils"], Vector: ["Vector"], Matrix: ["Matrix"], bmesh: ["bmesh"], random: ["random"], colorsys: ["colorsys"], re: ["re"], fnmatch: ["fnmatch"], csv: ["csv"], datetime: ["datetime"], numpy: ["numpy"],
+  anim_utils: ["anim_utils"], lambda: ["lambda"], enumerate: ["enumerate"], range: ["range()", "range("], zip: ["zip()", "zip("], fstring: ["f-string", "f-문자열", "f-strings"], listcomp: ["list comprehension", "리스트 컴프리헨션", "컴프리헨션"],
+  context: ["bpy.context"], data: ["bpy.data"], ops: ["bpy.ops"], depsgraph: ["depsgraph"], override: ["temp_override"], keyframe: ["keyframe_insert"], regex: ["정규식", "regex", "regular expression"], lambda_: []};
+function linkTerms(txt, ids){
+  var pairs = []; ids.forEach(function(id){ (KW[id] || []).forEach(function(k){ pairs.push([k, id]); }); });
+  if(!pairs.length) return txt;
+  pairs.sort(function(a, b){ return b[0].length - a[0].length; });
+  var done = {}, rx = new RegExp("(^|[^A-Za-z0-9_.])(" + pairs.map(function(p){ return p[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")(?![A-Za-z0-9_])", "g");
+  return txt.replace(rx, function(m, pre, w){ var id = null; pairs.forEach(function(p){ if(!id && p[0] === w) id = p[1]; }); if(!id || done[id]) return m; done[id] = 1; return pre + tl(id, w); });
+}
+function begOpen(){ try { return localStorage.getItem("bsa.beg") !== "0"; } catch(e){ return true; } }
+function newTermsHTML(list){
+  if(!list.length) return "";
+  return '<details class="nt"' + (begOpen() ? " open" : "") + '><summary>📘 ' + esc(t("newterms")) + " (" + list.length + "): " + list.map(function(x){ return esc(tn(PYG[x[0]])); }).join(" · ") + "</summary>" +
+    list.map(function(x){ var g = PYG[x[0]]; return '<div class="ntl">' + tl(x[0], "<b>" + esc(tn(g)) + "</b>") + ' <span class="ln">(' + (L === "en" ? "line " : "") + x[1] + (L === "en" ? "" : "번 줄") + ")</span> — " + esc(pg(g, "s")) + "</div>"; }).join("") + "</details>";
+}
 function explainHTML(s){
   var x = s.ex; if(!x) return "";
+  var terms = s.terms || [], ids = terms.map(function(x){ return x[0]; });
   var K = L === "en" ? "en" : "ko", li = function(arr, f){ return arr.map(f).join(""); };
   var chip = function(r){ var a = rng(r); return (a[0] === a[1] ? t("ex_line") + " " + a[0] : t("ex_lines") + " " + a[0] + "–" + a[1]); };
   var h = '<section class="explain" id="explain"><h2>💡 ' + esc(t("ex_title")) + '</h2>';
-  h += '<p class="ex-sum"><b>' + esc(t("ex_sum")) + ':</b> ' + esc(L === "en" ? x.sen : x.sko) + "</p>";
+  h += '<p class="ex-sum"><b>' + esc(t("ex_sum")) + ':</b> ' + linkTerms(esc(L === "en" ? x.sen : x.sko), ids) + "</p>";
+  h += '<p class="pygbar"><a class="pyglink" href="#scripts/glossary">' + esc(t("pyg")) + '</a> <button type="button" class="begbtn" id="begbtn">' + esc(t(begOpen() ? "beg_off" : "beg_on")) + "</button></p>";
   h += '<h3>' + esc(t("ex_blocks")) + '</h3><p class="ex-hint">' + esc(t("ex_hint")) + '</p><ol class="ex-blocks">' + li(x.blocks, function(b, i){
-    return '<li data-r="' + b.lines + '" data-i="' + i + '"><button class="ln-chip" type="button" data-r="' + b.lines + '">' + esc(chip(b.lines)) + "</button><span>" + esc(b[K]) + "</span></li>"; }) + "</ol>";
-  if(x.apis.length) h += '<h3>' + esc(t("ex_apis")) + '</h3><dl class="ex-apis">' + li(x.apis, function(a){ return "<dt><code>" + esc(a.name) + "</code></dt><dd>" + esc(a[K]) + "</dd>"; }) + "</dl>";
+    return '<li data-r="' + b.lines + '" data-i="' + i + '"><button class="ln-chip" type="button" data-r="' + b.lines + '">' + esc(chip(b.lines)) + "</button><span>" + linkTerms(esc(b[K]), ids) + "</span>" + newTermsHTML(terms.filter(function(tm){ return tm[2] === i; })) + "</li>"; }) + "</ol>";
+  if(x.apis.length) h += '<h3>' + esc(t("ex_apis")) + '</h3><dl class="ex-apis">' + li(x.apis, function(a){ return "<dt><code>" + esc(a.name) + "</code></dt><dd>" + linkTerms(esc(a[K]), ids) + "</dd>"; }) + "</dl>";
   if(x.tweak.length) h += '<h3>' + esc(t("ex_tweak")) + '</h3><ul class="ex-tweak">' + li(x.tweak, function(a){ return "<li>" + esc(a[K]) + "</li>"; }) + "</ul>";
   if(x.pit.length) h += '<h3>' + esc(t("ex_pit")) + '</h3><ul class="ex-pit">' + li(x.pit, function(a){ return "<li>" + esc(a[K]) + "</li>"; }) + "</ul>";
   return h + "</section>";
@@ -59,7 +82,8 @@ function bindExplain(root){
     var first = lines[a[0] - 1];
     if(scroll && first){ pre.scrollTop = Math.max(0, first.offsetTop - pre.clientTop - 24); var rc = pre.getBoundingClientRect(); if(rc.top < 60 || rc.top > window.innerHeight - 120) pre.scrollIntoView({block: "start", behavior: "smooth"}); }
   }
-  ex.addEventListener("click", function(e){ var li = e.target.closest(".ex-blocks li"); if(li) mark(li.getAttribute("data-r"), true); });
+  var bb = ex.querySelector("#begbtn"); if(bb) bb.onclick = function(){ var o = !begOpen(); try { localStorage.setItem("bsa.beg", o ? "1" : "0"); } catch(e){} ex.querySelectorAll("details.nt").forEach(function(d){ d.open = o; }); bb.textContent = t(o ? "beg_off" : "beg_on"); };
+  ex.addEventListener("click", function(e){ if(e.target.closest("a, summary, details.nt")) return; var li = e.target.closest(".ex-blocks li"); if(li) mark(li.getAttribute("data-r"), true); });
   ex.addEventListener("mouseover", function(e){ var li = e.target.closest(".ex-blocks li"); if(li && window.matchMedia("(hover: hover)").matches) mark(li.getAttribute("data-r"), false); });
   pre.addEventListener("click", function(e){
     var cl = e.target.closest(".cl"); if(!cl || (window.getSelection && String(window.getSelection()))) return;
@@ -98,12 +122,37 @@ function route(){
   document.querySelectorAll("#tabs a").forEach(function(a){ a.classList.toggle("on", a.getAttribute("data-tab") === (p[0] === "model" ? "model" : "scripts")); });
   var M = $("#main"); window.scrollTo(0, 0);
   if(p[0] === "model") renderModel(M, p[1] || "plan", p[2]);
+  else if(p[1] === "glossary") renderPyGlossary(M, p[2]);
   else if(p[1]) renderScript(M, p[1]); else renderScripts(M);
   bindLB(M);
 }
 window.addEventListener("hashchange", route);
 
 /* ================= Scripts tab ================= */
+var GS = {cat: "", q: ""};
+function renderPyGlossary(M, focus){
+  var used = {}; D.scripts.forEach(function(s){ (s.terms || []).forEach(function(x){ (used[x[0]] = used[x[0]] || []).push([s.id, x[1]]); }); });
+  var h = '<div class="crumbs"><a href="#scripts">' + esc(t("back")) + "</a></div>";
+  h += '<section class="intro"><h1>' + esc(t("pyg")) + " <small>" + (D.pyg || []).length + (L === "en" ? " terms" : "개") + "</small></h1><p>" + esc(pick("스크립트에 나오는 파이썬 모듈·문법과 블렌더 bpy 용어를 처음 배우는 사람 눈높이로 풀었어요. 각 스크립트의 해설에서도 용어가 처음 나오는 블록에 같은 설명이 붙고, 밑줄 친 용어에 마우스를 올리면(휴대폰은 탭) 짧은 설명이 보여요.",
+    "Every Python module, Python concept and Blender bpy term used by the scripts, explained for complete beginners. Each script's walkthrough repeats the short note in the block where the term first appears; hover (or tap) an underlined term for a quick explanation.")) + "</p></section>";
+  h += '<div class="filters"><input id="gq" type="search" placeholder="' + esc(t("search")) + '" value="' + esc(GS.q) + '"><div class="chips" id="gcats"><button data-c="" class="' + (GS.cat ? "" : "on") + '">' + esc(t("all")) + "</button>" + ["mod", "py", "bpy"].map(function(c){ return '<button data-c="' + c + '" class="' + (GS.cat === c ? "on" : "") + '">' + esc(t("gcat_" + c)) + "</button>"; }).join("") + "</div></div><div id='glist'></div>";
+  M.innerHTML = h;
+  function list(){
+    var q = GS.q.trim().toLowerCase();
+    $("#glist").innerHTML = ["mod", "py", "bpy"].filter(function(c){ return !GS.cat || GS.cat === c; }).map(function(c){
+      var gs = D.pyg.filter(function(g){ return g.cat === c && (!q || (g.term + " " + g.tn.join(" ") + " " + g.s.join(" ") + " " + g.d.join(" ")).toLowerCase().indexOf(q) >= 0); });
+      if(!gs.length) return "";
+      return '<h2 class="gh">' + esc(t("gcat_" + c)) + '</h2><div class="gterms">' + gs.map(function(g){
+        var u = used[g.id] || [];
+        return '<section class="gterm" id="g-' + g.id + '"><h3>' + esc(tn(g)) + (tn(g) !== g.term ? ' <small>' + esc(L === "en" ? g.tn[0] : g.tn[1]) + "</small>" : "") + '</h3><p class="gs">' + esc(pg(g, "s")) + "</p>" + (pg(g, "d") ? "<p>" + esc(pg(g, "d")) + "</p>" : "") + (g.ex ? '<pre class="gex"><code>' + esc(g.ex) + "</code></pre>" : "") +
+          (u.length ? '<p class="gused"><b>' + esc(t("usedin")) + " (" + u.length + "):</b> " + u.slice(0, 14).map(function(x){ return '<a href="#scripts/' + x[0] + '">' + x[0] + "</a>"; }).join(" ") + (u.length > 14 ? " …" : "") + "</p>" : "") + "</section>"; }).join("") + "</div>";
+    }).join("");
+  }
+  list();
+  $("#gq").oninput = function(){ GS.q = this.value; list(); };
+  $("#gcats").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; GS.cat = b.getAttribute("data-c"); this.querySelectorAll("button").forEach(function(x){ x.classList.toggle("on", x === b); }); list(); };
+  if(focus){ var el = document.getElementById("g-" + focus); if(el){ el.classList.add("focus"); setTimeout(function(){ window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - 90, behavior: "instant"}); }, 60); } }
+}
 var SS = {q: "", cat: "", lvl: 0};
 function renderScripts(M){
   var cats = []; D.scripts.forEach(function(s){ if(cats.indexOf(s.cat) < 0) cats.push(s.cat); });
@@ -111,7 +160,7 @@ function renderScripts(M){
   var h = '<section class="intro"><h1>' + esc(t("tab_scripts")) + ' <small>' + D.scripts.length + (L === "en" ? " scripts" : "개") + '</small></h1><p>' +
     esc(pick("실무에서 바로 쓰는 bpy 스크립트 100개를 쉬운 것부터 어려운 순서로 모았어요. 모든 스크립트는 Blender 5.3의 Scripting 탭(Text Editor → Run Script)으로 실제 실행해서 결과를 검사했고, 실행 전·중간·후 화면을 그대로 찍었어요.",
     "100 practical bpy scripts from simple to advanced. Every script was actually run in Blender 5.3 through the Scripting tab (Text Editor → Run Script), checked automatically, and captured before / during / after.")) +
-    ' <span class="badge ok">✓ ' + nPass + "/" + D.scripts.length + " " + esc(t("verified")) + "</span></p></section>";
+    ' <span class="badge ok">✓ ' + nPass + "/" + D.scripts.length + " " + esc(t("verified")) + '</span></p><p><a class="pyglink" href="#scripts/glossary">' + esc(t("pyg")) + "</a> " + esc(pick("— bpy, import, for, f-문자열 같은 말이 처음이라면 여기부터 보세요.", "— new to bpy, import, for or f-strings? Start here.")) + "</p></section>";
   h += '<div class="filters"><input id="q" type="search" placeholder="' + esc(t("search")) + '" value="' + esc(SS.q) + '">';
   h += '<div class="chips" id="cats"><b>' + esc(t("category")) + '</b><button data-c="" class="' + (SS.cat ? "" : "on") + '">' + esc(t("all")) + "</button>" +
     cats.map(function(c){ return '<button data-c="' + c + '" class="' + (SS.cat === c ? "on" : "") + '">' + esc(I.cat(c)) + "</button>"; }).join("") + "</div>";
@@ -177,9 +226,9 @@ function renderScript(M, id){
 
 /* ================= Modeling tab ================= */
 function renderModel(M, sub, arg){
-  var h = '<div class="subtabs">' + [["plan", "sub_plan"], ["examples", "sub_examples"], ["gallery", "sub_gallery"]].map(function(x){ return '<a href="#model/' + x[0] + '" class="' + (sub === x[0] || (sub === "ex" && x[0] === "examples") ? "on" : "") + '">' + esc(t(x[1])) + "</a>"; }).join("") + "</div><div id='msub'></div>";
+  var h = '<div class="subtabs">' + [["plan", "sub_plan"], ["examples", "sub_examples"], ["starts", "sub_starts"], ["gallery", "sub_gallery"], ["keys", "sub_keys"]].map(function(x){ return '<a href="#model/' + x[0] + '" class="' + (sub === x[0] || (sub === "ex" && x[0] === "examples") || (sub === "st" && x[0] === "starts") ? "on" : "") + '">' + esc(t(x[1])) + "</a>"; }).join("") + "</div><div id='msub'></div>";
   M.innerHTML = h; var S = $("#msub");
-  if(sub === "gallery") renderGallery(S); else if(sub === "examples") renderExamples(S); else if(sub === "ex") renderExample(S, arg); else window.PLAN.render(S);
+  if(sub === "gallery") renderGallery(S); else if(sub === "keys") renderKeys(S); else if(sub === "examples") renderExamples(S); else if(sub === "ex") renderExample(S, arg); else if(sub === "starts") renderStarts(S, arg); else if(sub === "st") renderStart(S, arg); else window.PLAN.render(S);
 }
 function exRender(m, meth){ var x = m.methods[meth]; if(!x) return null; return x.imgs.filter(function(i){ return i.kind === "render"; })[0]; }
 function renderExamples(S){
@@ -200,13 +249,45 @@ function methodCol(m, meth, compact){
   var h = '<div class="mcol ' + meth + (m.better === meth ? " best" : "") + '"><div class="mhead"><h2>' + (meth === "basic" ? "🔧 " : "🧱 ") + esc(t(meth)) + (m.better === meth ? ' <span class="badge ok">★ ' + esc(t("better")) + "</span>" : "") + '</h2><p class="mut">' + esc(t(meth + "_sub")) + "</p></div>";
   h += '<ol class="steps">' + x.steps.map(function(s, i){
     var im = i < x.steps.length - 1 ? stepImg["step" + (i + 1)] : lastAfter;
-    return '<li><div class="stxt"><b>' + (i + 1) + ".</b> " + esc(lab(s)) + "</div>" + (im ? '<figure class="shot" data-lb="' + m.id + meth + '" data-src="' + im.src + '" data-cap="' + esc((i + 1) + ". " + lab(s)) + '"><img loading="lazy" src="' + im.th + '" alt=""></figure>' : "") + "</li>";
+    return '<li><div class="stxt"><b>' + (i + 1) + ".</b> " + esc(lab(s)) + "</div>" + howHTML(x.howto && x.howto[i]) + (im ? '<figure class="shot" data-lb="' + m.id + meth + '" data-src="' + im.src + '" data-cap="' + esc((i + 1) + ". " + lab(s)) + '"><img loading="lazy" src="' + im.th + '" alt=""></figure>' : "") + "</li>";
   }).join("") + "</ol>";
   if(rend) h += '<figure class="shot final" data-lb="' + m.id + meth + '" data-src="' + rend.src + '" data-cap="' + esc(t("final")) + '"><img loading="lazy" src="' + rend.th + '" alt=""><figcaption>' + esc(t("final")) + " (Cycles)</figcaption></figure>";
   if(!compact){
     h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" data-copy="' + meth + '">📋 ' + esc(t("full_code")) + '</button></div><pre class="code small"><code>' + hl(x.code) + "</code></pre>";
   }
   return h + "</div>";
+}
+/* exact manual how-to under each step (tools/howto.py; keys/menus checked in Blender 5.3) */
+function kbd(txt){
+  return esc(txt).replace(/\b((?:Ctrl|Shift|Alt)(?:\+(?:Ctrl|Shift|Alt))*\+(?:[A-Z0-9]|F\d+|Tab|Delete)\b|F9|F3|Tab|Enter)(?![a-z])/g, "<kbd>$1</kbd>").replace(/(^|\s)([A-Z])(?= →| \(| =)/g, "$1<kbd>$2</kbd>").replace(/^([1-3])(?= \()/, "<kbd>$1</kbd>");
+}
+function howHTML(lines){
+  if(!lines || !lines.length) return "";
+  return '<details class="how" open><summary>⌨️ ' + esc(t("how")) + '</summary><ul>' + lines.map(function(x){ return "<li>" + kbd(pick(x[0], x[1])) + "</li>"; }).join("") + "</ul></details>";
+}
+function modPath(label){
+  var P = D.modpath || {}, k = Object.keys(P).filter(function(k){ return P[k][1].toLowerCase() === String(label).toLowerCase() || P[k][1].replace(" (Legacy)", "").toLowerCase() === String(label).toLowerCase() || k.toLowerCase() === String(label).toLowerCase().replace(/ /g, "_") || (k === "SUBSURF" && /^subdiv/i.test(label)); })[0];
+  if(!k) return null; var c = P[k][0];
+  return pick("Properties › Modifier 탭(🔧) › Add Modifier › " + (c ? c + " › " : "") + P[k][1], "Properties › Modifier tab (🔧) › Add Modifier › " + (c ? c + " › " : "") + P[k][1]);
+}
+window.BSA.modPath = modPath; window.BSA.kbd = kbd;
+function renderKeys(S){
+  var G = D.glossary || {keys: [], mods: []};
+  var sec = {mode: ["모드·선택", "Modes & selection"], add: ["추가·복제·삭제", "Add, duplicate, delete"], xf: ["이동·회전·크기", "Move, rotate, scale"], edit: ["Edit Mode 도구", "Edit Mode tools"], obj: ["Object Mode", "Object Mode"], nm: ["커브·글자·메타볼·노드·뼈대", "Curves, text, metaballs, nodes, bones"]};
+  var h = '<section class="intro"><h1>' + esc(t("sub_keys")) + "</h1><p>" + esc(pick("예제와 계획에 나오는 단축키·메뉴 경로를 한곳에 모았어요. 모두 Blender 5.3 기본 키맵(keymap_data/blender_default.py)과 메뉴 소스(bl_ui)로 확인했습니다. 단축키는 3D 뷰포트 위에 마우스가 있을 때 동작해요.",
+    "Every shortcut and menu path used in the examples and plans, in one place. All checked against Blender 5.3's default keymap (keymap_data/blender_default.py) and menu sources (bl_ui). Shortcuts work with the mouse over the 3D Viewport.")) + "</p></section>";
+  Object.keys(sec).forEach(function(k){
+    h += '<h2 class="gh">' + esc(pick(sec[k][0], sec[k][1])) + '</h2><table class="keys"><tbody>' + G.keys.filter(function(g){ return g[0] === k; }).map(function(g){ return "<tr><th>" + kbd(g[1].split(" | ")[L === "en" && g[1].indexOf(" | ") > 0 ? 1 : 0]) + "</th><td>" + esc(pick(g[2], g[3])) + "</td></tr>"; }).join("") + "</tbody></table>";
+  });
+  h += '<h2 class="gh">🔧 ' + esc(pick("모디파이어: 어디서·어떻게", "Modifiers: where & how")) + '</h2><ol class="modhow"><li>' + kbd(pick("오브젝트 선택(Object Mode) → Properties 편집기(보통 오른쪽 아래) → Modifier 탭(🔧 파란 렌치) → Add Modifier → 분류(Edit / Generate / Deform / Normals / Physics) → 이름. 메뉴가 열린 상태에서 바로 글자를 치면 검색돼요.",
+    "Select the object (Object Mode) → Properties editor (usually bottom right) → Modifier tab (🔧 blue wrench) → Add Modifier → category (Edit / Generate / Deform / Normals / Physics) → name. Typing while the menu is open searches it.")) + "</li><li>" +
+    kbd(pick("위에서 아래 순서로 계산돼요(스택). 순서는 패널 머리를 끌어서, 또는 ⌄ › Move to First/Last.", "They are evaluated top to bottom (the stack). Reorder by dragging the panel header, or ⌄ › Move to First/Last.")) + "</li><li>" +
+    kbd(pick("확정(Apply): 패널 위에 마우스 → Ctrl+A, 또는 패널 오른쪽 ⌄ › Apply. 지우기: 패널 위에 마우스 → X (또는 Delete), 또는 패널 머리의 X 버튼. 복제: 패널 위 Shift+D. 패널 위 Shift+A = Add Modifier 메뉴.", "Apply: hover the panel → Ctrl+A, or the panel's ⌄ › Apply. Delete: hover the panel → X (or Delete), or the X button in the panel header. Duplicate: Shift+D over the panel. Shift+A over the panels = Add Modifier menu.")) + "</li><li>" +
+    kbd(pick("Boolean 커터 숨기기: 커터 선택 → H (Alt+H로 다시), 또는 Object 탭(주황 네모) › Viewport Display › Display As: Wire / Bounds, 렌더에서 빼기: Object 탭 › Visibility › Renders 해제.", "Hide a Boolean cutter: select it → H (Alt+H to unhide), or Object tab (orange square) › Viewport Display › Display As: Wire / Bounds; exclude from render: Object tab › Visibility › uncheck Renders.")) + "</li><li>" +
+    kbd(pick("5.3 주의: Generate › 'Array'는 Geometry Nodes 버전이고 기존 모디파이어는 'Array (Legacy)'예요. 예제는 Legacy를 씁니다.", "5.3 note: Generate › 'Array' is the Geometry Nodes version; the classic modifier is 'Array (Legacy)'. The examples use Legacy.")) + "</li></ol>";
+  h += '<table class="keys mods"><thead><tr><th>' + esc(pick("모디파이어", "Modifier")) + "</th><th>" + esc(pick("Add Modifier 경로", "Add Modifier path")) + "</th><th>" + esc(pick("주로 바꾸는 값", "Key fields")) + "</th></tr></thead><tbody>" +
+    G.mods.map(function(m){ return "<tr><th>" + esc(m[2]) + "</th><td>" + esc((m[1] ? m[1] + " › " : "") + m[2]) + "</td><td>" + esc(pick(m[3], m[4])) + "</td></tr>"; }).join("") + "</tbody></table>";
+  S.innerHTML = h;
 }
 function renderExample(S, id){
   var m = D.models.filter(function(x){ return x.id === id; })[0]; if(!m){ location.hash = "#model/examples"; return; }
@@ -220,6 +301,45 @@ function renderExample(S, id){
   S.innerHTML = h;
   $("#mtog").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; var v = b.getAttribute("data-v"); try { localStorage.setItem("bsa.exview", v); } catch(x){} this.querySelectorAll("button").forEach(function(x){ x.classList.toggle("on", x === b); }); $("#mcols").className = "mcols view-" + v; };
   S.querySelectorAll("[data-copy]").forEach(function(b){ b.onclick = function(){ copy(D.prelude + "\nD2R = 0.0174533\n" + m.methods[b.getAttribute("data-copy")].code, b); }; });
+}
+/* ---------- start-type examples (non-mesh Shift+A types) ---------- */
+function stRender(x){ return x.imgs.filter(function(i){ return i.kind === "render"; })[0]; }
+function renderStarts(S, filt){
+  var T = D.start_types || [], X = D.starts || [];
+  var h = '<section class="intro"><h1>' + esc(t("sub_starts")) + " <small>" + X.length + (L === "en" ? " examples" : "개") + "</small></h1><p>" +
+    esc(pick("메시 큐브만이 시작점은 아니에요. Shift+A의 Circle·Curve·Surface·Metaball·Text·Point Cloud·Grease Pencil·Armature에서 시작하는 실용 예제예요. 단계마다 정확한 키·메뉴·값이 있고, 모든 그림은 Blender 5.3에서 스크립트를 실제로 실행해 찍었어요.",
+    "A mesh cube isn't the only starting point. Practical examples that start from Shift+A Circle, Curve, Surface, Metaball, Text, Point Cloud, Grease Pencil and Armature, with exact keys, menus and values per step; every image comes from actually running the script in Blender 5.3.")) + "</p></section>";
+  h += '<div class="chips stf"><a href="#model/starts" class="chip' + (!filt ? " on" : "") + '">' + esc(pick("전체", "All")) + " " + X.length + "</a>" + T.map(function(ty){
+    var n = X.filter(function(x){ return x.type === ty[0]; }).length;
+    return '<a href="#model/starts/' + ty[0] + '" class="chip' + (filt === ty[0] ? " on" : "") + '" title="' + esc(ty[2]) + '">' + esc(ty[1]) + " " + n + "</a>";
+  }).join("") + "</div>";
+  T.forEach(function(ty){
+    if(filt && filt !== ty[0]) return;
+    var xs = X.filter(function(x){ return x.type === ty[0]; }); if(!xs.length) return;
+    h += '<section class="stsec"><h2 class="gh">' + esc(pick(ty[3], ty[4])) + ' <code class="op">' + esc(ty[2]) + '</code></h2><div class="cards ex">' + xs.map(function(x){
+      var r = stRender(x);
+      return '<a class="card" href="#model/st/' + x.id + '"><div class="th">' + (r ? '<img loading="lazy" src="' + r.th + '" alt="">' : "") + '</div><div class="cb"><div class="meta"><span class="cat">' + esc(ty[1]) + '</span>' + (x.verify === "pass" && x.capture === "pass" ? '<span class="rec">✓ 5.3</span>' : "") + "</div><h3>" + esc(pick(x.ko, x.en)) + "</h3><p>" + esc(pick(x.dko, x.den)) + "</p></div></a>";
+    }).join("") + "</div></section>";
+  });
+  S.innerHTML = h;
+}
+function renderStart(S, id){
+  var x = (D.starts || []).filter(function(e){ return e.id === id; })[0]; if(!x){ location.hash = "#model/starts"; return; }
+  var ty = (D.start_types || []).filter(function(t_){ return t_[0] === x.type; })[0] || [x.type, x.type];
+  var views = x.imgs.filter(function(i){ return i.kind === "view"; }), rend = stRender(x), stepImg = {};
+  views.forEach(function(v){ stepImg[v.stage] = v; });
+  var h = '<div class="crumbs"><a href="#model/starts/' + x.type + '">' + esc(t("back")) + "</a></div>";
+  h += '<article class="detail"><h1>' + esc(pick(x.ko, x.en)) + ' <small class="sub">' + esc(pick(x.en, x.ko)) + '</small></h1><p class="lead">' + esc(pick(x.dko, x.den)) + "</p>";
+  h += '<p><span class="chip">' + esc(ty[1]) + '</span> ' + esc(pick("시작:", "Start:")) + " " + kbd(x.start) + (x.verify === "pass" ? ' <span class="badge ok">✓ ' + esc(pick("Blender 5.3에서 실행·검사 통과", "ran and checked in Blender 5.3")) + "</span>" : "") + "</p>";
+  h += '<div class="mcol one"><ol class="steps">' + x.steps.map(function(s_, i){
+    var im = i < x.steps.length - 1 ? stepImg["step" + (i + 1)] : stepImg.after;
+    return '<li><div class="stxt"><b>' + (i + 1) + ".</b> " + esc(lab(s_)) + "</div>" + howHTML(x.howto[i]) + (im ? '<figure class="shot" data-lb="' + x.id + '" data-src="' + im.src + '" data-cap="' + esc((i + 1) + ". " + lab(s_)) + '"><img loading="lazy" src="' + im.th + '" alt=""></figure>' : "") + "</li>";
+  }).join("") + "</ol>";
+  if(rend) h += '<figure class="shot final" data-lb="' + x.id + '" data-src="' + rend.src + '" data-cap="' + esc(t("final")) + '"><img loading="lazy" src="' + rend.th + '" alt=""><figcaption>' + esc(t("final")) + " (Cycles)</figcaption></figure>";
+  h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" id="stcopy">📋 ' + esc(t("full_code")) + '</button></div><pre class="code small"><code>' + hl(x.code) + "</code></pre></div></article>";
+  S.innerHTML = h;
+  $("#stcopy").onclick = function(){ copy(D.start_prelude + "\n" + x.code, this); };
+  bindLB(S);
 }
 window.BSA.methodCol = methodCol; window.BSA.bindLB = bindLB; window.BSA.exRender = exRender; window.BSA.lab = lab;
 

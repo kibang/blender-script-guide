@@ -16,15 +16,20 @@ function g(k){ try { return localStorage.getItem(LS + k) || ""; } catch(e){ retu
 function s(k, v){ try { if(v) localStorage.setItem(LS + k, v); else localStorage.removeItem(LS + k); } catch(e){} }
 var MEM = {}; // keys typed this session (not saved unless "remember")
 
-function prompt(){
+function prompt(scene){
   var ids = window.APP_DATA.models.map(function(m){ return m.id; }).join(", ");
-  return "You are a Blender 5.3 modeling teacher. Look at the object in the photo (if a red box is drawn, only that object) and plan how to model it.\n" +
+  return "You are a Blender 5.3 modeling teacher. Look at the image (if a red box is drawn, only the object inside it) and plan how to model it.\n" +
     "Answer ONLY with JSON, no markdown, using this schema:\n" +
-    '{"object_ko": str, "object_en": str, "primitives": [Shift+A mesh primitive names from: Plane, Cube, Circle, Quad Sphere, UV Sphere, Ico Sphere, Cylinder, Cone, Torus, Grid, Monkey],\n' +
-    ' "basic_steps": [{"ko": str, "en": str}]  // 4-8 steps using ONLY edit-mode tools (Extrude E, Inset I, Loop Cut Ctrl+R, Bevel Ctrl+B, Scale S, Move G, Rotate R, Knife K, Spin, Merge M, Bridge Edge Loops, Shift+D). NO modifiers.\n' +
-    ' "modifier_steps": [{"ko": str, "en": str, "modifier": str|null}]  // 3-7 steps using modifiers (Mirror, Array, Solidify, Screw, Bevel, Subdivision Surface, Boolean, Simple Deform, Cast, Displace, Curve, Wireframe, Weld, Remesh)\n' +
+    '{"scene": bool, // true if the image (or the red box) shows a whole scene/illustration with many separate objects rather than one object\n' +
+    ' "objects": [{"name_ko": str, "name_en": str, "kind": "prop"|"character", "primitive": str, "plan_ko": str, "plan_en": str, "how_ko": str, "how_en": str, "difficulty": 1..5, "example": one of [' + ids + '] or null}],\n' +
+    '   // only when scene=true: up to 12 clearly visible objects, biggest/simplest first. kind=character for people/animals/creatures: say honestly it is character modeling (sculpting/retopology, advanced) and give only a blocking-out hint.\n' +
+    ' "object_ko": str, "object_en": str, "primitives": [Shift+A > Mesh names from: Plane, Cube, Circle, Quad Sphere, UV Sphere, Ico Sphere, Cylinder, Cone, Torus, Grid, Monkey],\n' +
+    ' "basic_steps": [{"ko": str, "en": str, "how_ko": str, "how_en": str}]  // 4-8 steps using ONLY edit-mode tools (Extrude E, Inset I, Loop Cut Ctrl+R, Bevel Ctrl+B, Scale S, Move G, Rotate R, Knife K, Spin, Merge M, Bridge Edge Loops, Shift+D). NO modifiers.\n' +
+    ' "modifier_steps": [{"ko": str, "en": str, "how_ko": str, "how_en": str, "modifier": str|null}]  // 3-7 steps using modifiers (Mirror, Array, Solidify, Screw, Bevel, Subdivision Surface, Boolean, Simple Deform, Cast, Displace, Curve, Wireframe, Weld, Remesh)\n' +
     ' "better": "basic"|"modifier", "why_ko": str, "why_en": str, "closest_example": one of [' + ids + "] or null, \"confidence\": 0..1}\n" +
-    "Korean text must be natural Korean for beginners. Keep each step under 120 characters.";
+    "how_ko/how_en = the exact manual way in Blender 5.3: mode (Object/Edit, select mode 1/2/3), shortcut, menu path (e.g. Face > Inset Faces), what to type, F9 panel fields; for modifiers: Properties > Modifier tab > Add Modifier > category (Generate/Deform/Normals/Physics) > name and the key fields. Note: in 5.3 the classic Array is 'Array (Legacy)'.\n" +
+    "If scene=true, basic_steps/modifier_steps describe the single most useful simple object (say which in object_en).\n" +
+    "Korean text must be natural Korean for beginners. Keep each step under 120 characters and each how under 220.";
 }
 function ui(st){
   var pv = g("provider") || "openai", P = PROV[pv];
@@ -110,23 +115,45 @@ function validate(j){
   var out = {object_ko: str(j.object_ko, 80), object_en: str(j.object_en, 80), primitives: (Array.isArray(j.primitives) ? j.primitives : []).filter(function(p){ return typeof p === "string"; }).slice(0, 6).map(function(p){ return p.slice(0, 40); }),
     basic: [], modifier: [], better: j.better === "basic" ? "basic" : j.better === "modifier" ? "modifier" : null, why_ko: str(j.why_ko, 400), why_en: str(j.why_en, 400),
     example: ids.indexOf(j.closest_example) >= 0 ? j.closest_example : null, confidence: typeof j.confidence === "number" ? Math.max(0, Math.min(1, j.confidence)) : null, warn: warn};
+  out.scene = j.scene === true;
+  out.objects = (Array.isArray(j.objects) ? j.objects : []).filter(function(o){ return o && (o.name_ko || o.name_en); }).slice(0, 14).map(function(o){
+    return {ko: str(o.name_ko, 60), en: str(o.name_en, 60), character: o.kind === "character", prim: str(o.primitive, 40), plan_ko: str(o.plan_ko, 300), plan_en: str(o.plan_en, 300), how_ko: str(o.how_ko, 300), how_en: str(o.how_en, 300),
+      diff: typeof o.difficulty === "number" ? Math.max(1, Math.min(5, Math.round(o.difficulty))) : null, example: ids.indexOf(o.example) >= 0 ? o.example : null};
+  });
   (Array.isArray(j.basic_steps) ? j.basic_steps : []).slice(0, 10).forEach(function(x){ if(!x) return; var ko = str(x.ko || x.text, 200), en = str(x.en || x.text, 200); if(!ko && !en) return;
-    var bad = MODRE.test(en) && !/\bno modifier/i.test(en); out.basic.push({ko: ko, en: en, flag: bad}); if(bad) warn.push(pick("기본 방식 단계에 모디파이어가 섞여 있어요 (표시된 단계).", "A basic step mentions a modifier (flagged).")); });
+    var bad = MODRE.test(en) && !/\bno modifier/i.test(en); out.basic.push({ko: ko, en: en, how_ko: str(x.how_ko, 300), how_en: str(x.how_en, 300), flag: bad}); if(bad) warn.push(pick("기본 방식 단계에 모디파이어가 섞여 있어요 (표시된 단계).", "A basic step mentions a modifier (flagged).")); });
   (Array.isArray(j.modifier_steps) ? j.modifier_steps : []).slice(0, 10).forEach(function(x){ if(!x) return; var ko = str(x.ko || x.text, 200), en = str(x.en || x.text, 200); if(!ko && !en) return;
     var m = typeof x.modifier === "string" ? x.modifier.trim() : null, known = !m || MODS.some(function(n){ return n.toLowerCase() === m.toLowerCase() || n.toLowerCase().replace(/ /g, "") === m.toLowerCase().replace(/[ _]/g, ""); });
-    out.modifier.push({ko: ko, en: en, mod: m, unknown: !known}); if(!known) warn.push(pick("Blender 5.3에 없는 모디파이어 이름: ", "Not a Blender 5.3 modifier: ") + m); });
-  if(!out.basic.length || !out.modifier.length) warn.push(pick("AI가 두 방법 중 하나를 빠뜨렸어요.", "The AI left out one of the two methods."));
+    out.modifier.push({ko: ko, en: en, how_ko: str(x.how_ko, 300), how_en: str(x.how_en, 300), mod: m, unknown: !known}); if(!known) warn.push(pick("Blender 5.3에 없는 모디파이어 이름: ", "Not a Blender 5.3 modifier: ") + m); });
+  if(!out.scene && (!out.basic.length || !out.modifier.length)) warn.push(pick("AI가 두 방법 중 하나를 빠뜨렸어요.", "The AI left out one of the two methods."));
   if(j.closest_example && !out.example) warn.push(pick("AI가 없는 예제 이름을 말해서 무시했어요: ", "Ignored unknown example name: ") + String(j.closest_example).slice(0, 40));
   return out;
+}
+function aiHow(x, mp){
+  var tx = pick(x.how_ko, x.how_en); if(!tx && !mp) return "";
+  return '<details class="how" open><summary>⌨️ ' + esc(t("how")) + ' <small class="mut">(AI)</small></summary><ul>' + (tx ? "<li>" + window.BSA.kbd(tx) + "</li>" : "") + (mp ? '<li>' + window.BSA.kbd(mp) + ' <small class="mut">(' + esc(pick("앱이 확인한 5.3 경로", "5.3 path checked by the app")) + ")</small></li>" : "") + "</ul></details>";
+}
+function sceneHtml(a){
+  var h = '<div class="scenebox"><h3>🧩 ' + esc(pick("장면(여러 물체)으로 판단 — 물체별 계획 (AI)", "Judged a scene (many objects) — per-object plan (AI)")) + "</h3>";
+  if(!a.objects.length) return h + '<p class="mut">' + esc(pick("AI가 물체 목록을 주지 않았어요. 아래 ‘영역 고르기’로 물체 하나를 잘라서 다시 물어보세요.", "The AI gave no object list. Crop one object with ‘pick a region’ below and ask again.")) + "</p></div>";
+  h += '<ol class="objlist">' + a.objects.map(function(o){
+    var m = o.example && window.APP_DATA.models.filter(function(x){ return x.id === o.example; })[0];
+    return '<li class="' + (o.character ? "char" : "") + '"><b>' + esc(pick(o.ko, o.en)) + "</b>" + (o.prim ? ' <span class="chip">' + esc(o.prim) + "</span>" : "") + (o.diff ? ' <span class="mut small">' + "★".repeat(o.diff) + "</span>" : "") +
+      (o.character ? ' <span class="badge bad">' + esc(pick("캐릭터 = 고급(스컬프팅)", "Character = advanced (sculpting)")) + "</span>" : "") +
+      "<div>" + esc(pick(o.plan_ko, o.plan_en)) + "</div>" + (pick(o.how_ko, o.how_en) ? '<div class="hhow">⌨️ ' + window.BSA.kbd(pick(o.how_ko, o.how_en)) + "</div>" : "") +
+      (m ? '<a class="linkbtn small" href="#model/ex/' + m.id + '">' + esc(pick("검증된 예제: ", "Verified example: ") + pick(m.ko, m.en)) + " →</a>" : "") + "</li>";
+  }).join("") + "</ol>";
+  return h + '<p class="mut small">' + esc(pick("AI가 본 목록이라 빠지거나 틀린 물체가 있을 수 있어요. 캐릭터(사람·동물)는 상자 모델링으로 덩어리만 잡고, 실제 모양은 Sculpt Mode에서 다듬는 고급 작업이에요.", "This list is what the AI saw — objects may be missing or wrong. Characters (people/animals) are blocked out with boxes and then shaped in Sculpt Mode — an advanced job.")) + "</p></div>";
 }
 function resultHtml(a){
   if(a.error) return '<div class="err"><b>⚠ ' + esc(a.error) + "</b>" + (a.detail ? '<pre class="small">' + esc(a.detail) + "</pre>" : "") + "</div>";
   var h = '<div class="aires"><h3>' + esc(pick(a.object_ko, a.object_en) || "?") + ' <small class="mut">' + esc(a.provider || "") + (a.confidence != null ? " · " + Math.round(a.confidence * 100) + "%" : "") + "</small></h3>";
   if(a.primitives.length) h += "<p><b>" + esc(t("prims")) + ":</b> " + a.primitives.map(esc).join(", ") + "</p>";
   if(a.warn.length) h += '<div class="warn small">' + a.warn.map(esc).join("<br>") + "</div>";
+  if(a.scene || (a.objects && a.objects.length)) h += sceneHtml(a);
   h += '<div class="mcols view-both"><div class="mcol basic' + (a.better === "basic" ? " best" : "") + '"><h2>🔧 ' + esc(t("basic")) + (a.better === "basic" ? ' <span class="badge ok">★ ' + esc(t("better")) + "</span>" : "") + '</h2><ol class="steps">' +
-    a.basic.map(function(x){ return '<li class="' + (x.flag ? "flag" : "") + '"><div class="stxt">' + esc(pick(x.ko, x.en)) + "</div></li>"; }).join("") + '</ol></div><div class="mcol modifier' + (a.better === "modifier" ? " best" : "") + '"><h2>🧱 ' + esc(t("modifier")) + (a.better === "modifier" ? ' <span class="badge ok">★ ' + esc(t("better")) + "</span>" : "") + '</h2><ol class="steps">' +
-    a.modifier.map(function(x){ return '<li class="' + (x.unknown ? "flag" : "") + '"><div class="stxt">' + esc(pick(x.ko, x.en)) + (x.mod ? ' <span class="chip">' + esc(x.mod) + "</span>" : "") + "</div></li>"; }).join("") + "</ol></div></div>";
+    a.basic.map(function(x){ return '<li class="' + (x.flag ? "flag" : "") + '"><div class="stxt">' + esc(pick(x.ko, x.en)) + "</div>" + aiHow(x) + "</li>"; }).join("") + '</ol></div><div class="mcol modifier' + (a.better === "modifier" ? " best" : "") + '"><h2>🧱 ' + esc(t("modifier")) + (a.better === "modifier" ? ' <span class="badge ok">★ ' + esc(t("better")) + "</span>" : "") + '</h2><ol class="steps">' +
+    a.modifier.map(function(x){ var mp = x.mod && window.BSA.modPath(x.mod); return '<li class="' + (x.unknown ? "flag" : "") + '"><div class="stxt">' + esc(pick(x.ko, x.en)) + (x.mod ? ' <span class="chip">' + esc(x.mod) + "</span>" : "") + "</div>" + aiHow(x, mp) + "</li>"; }).join("") + "</ol></div></div>";
   if(a.why_ko || a.why_en) h += '<div class="which"><b>💡 ' + esc(t("which")) + "</b> " + esc(pick(a.why_ko, a.why_en)) + "</div>";
   if(a.example){ var m = window.APP_DATA.models.filter(function(x){ return x.id === a.example; })[0]; h += '<p><a class="linkbtn" href="#model/ex/' + a.example + '">' + esc(pick("비슷한 예제 (실제 단계 이미지): ", "Similar worked example (real step images): ")) + esc(pick(m.ko, m.en)) + " →</a></p>"; }
   return h + '<p class="mut small">' + esc(pick("AI가 만든 계획이에요 — 단계 이미지는 없고, 실제로 실행해 검증한 것은 위의 예제들뿐이에요.", "AI-generated plan — no step images; only the worked examples above were actually run and verified.")) + "</p></div>";
