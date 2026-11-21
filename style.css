@@ -181,3 +181,18 @@ section.gterm p.gused a{margin-right:.35em}
 @media (max-width:600px){.gterms{grid-template-columns:1fr}}
 .ex-blocks li{flex-wrap:wrap}.ex-blocks li>span{flex:1 1 0;min-width:0}
 @media(max-width:640px){.ex-blocks li{flex-wrap:nowrap}.ex-blocks li>span{flex:none}}
+/* caution + AI recognition (SigLIP) */
+.caution{background:rgba(255,176,0,.08);border:1px solid rgba(255,176,0,.55);border-left:5px solid #ffb000;border-radius:10px;padding:9px 12px;margin:10px 0}
+.caution p{margin:.35rem 0}.caution details summary{cursor:pointer;color:var(--acc)}
+.recog{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 12px}
+.recog h2,.recog h3{margin:.2rem 0 .4rem}.recog.ask{border-color:var(--acc)}.recog.fail{border-color:#a14a4a;background:#2a1d1d}.recog.off{background:none;border:0;padding:0}
+.recog .btns{display:flex;flex-wrap:wrap;gap:8px}
+.pbar{height:12px;background:#0003;border:1px solid var(--line);border-radius:7px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--acc);transition:width .15s}
+.unsure{background:rgba(255,200,0,.1);border:1px solid rgba(255,200,0,.5);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:14px}
+.rtop{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.rcand{display:grid;grid-template-columns:18px minmax(80px,1fr) minmax(60px,2fr) 44px;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 9px;color:var(--text);cursor:pointer;font-size:14.5px;text-align:left}
+.rcand.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}.rcand .rk{font-weight:800;color:var(--acc)}.rcand b{text-align:right}
+.rcand .bar{height:9px;background:#0003;border-radius:5px;overflow:hidden}.rcand .bar i{display:block;height:100%;background:var(--acc)}
+.rsel select{max-width:100%;margin-left:4px;padding:3px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px}
+.rplan{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}.okc{color:#7bd88f}.tiny{font-size:11.5px}
+.shapefb>summary{cursor:pointer;color:var(--mut);margin:8px 0}.credits{font-size:12px;opacity:.85}

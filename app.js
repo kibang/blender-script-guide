@@ -368,6 +368,9 @@ function renderGallery(S){
 }
 
 $("#foot").innerHTML = esc(pick("모든 이미지는 Blender 5.3.0(factory settings)에서 스크립트를 실제로 실행해 찍었습니다. 이 페이지는 아무 데이터도 서버로 보내지 않아요 (AI 모드를 직접 켰을 때만 선택한 회사로 전송).",
-  "All images were captured by actually running the scripts in Blender 5.3.0 (factory settings). This page sends nothing anywhere (only the optional AI mode, when you use it, sends to the provider you choose).")) + " · " + D.scripts.length + " scripts · " + D.models.length + " examples";
+  "All images were captured by actually running the scripts in Blender 5.3.0 (factory settings). This page sends nothing anywhere (only the optional AI mode, when you use it, sends to the provider you choose).")) + " · " + D.scripts.length + " scripts · " + D.models.length + " examples" +
+  (D.siglip ? '<br><span class="credits">' + esc(pick("사진 인식: SigLIP base patch16-224 (Google, Apache-2.0) · ONNX 변환 Xenova/transformers.js (Apache-2.0) · onnxruntime-web 1.31.1 (Microsoft, MIT). 인식 모델은 직접 켰을 때만 이 사이트에서 내려받고, 사진은 기기 안에서만 분석해요. ",
+    "Photo recognition: SigLIP base patch16-224 (Google, Apache-2.0) · ONNX conversion Xenova/transformers.js (Apache-2.0) · onnxruntime-web 1.31.1 (Microsoft, MIT). The model is downloaded from this site only when you turn it on; photos are analysed on your device only. ")) +
+    '<a href="THIRD_PARTY.md">' + esc(pick("라이선스 전문", "Licenses")) + "</a></span>" : "");
 route();
 })();

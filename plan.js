@@ -3,7 +3,7 @@
 "use strict";
 var D = window.APP_DATA, I = window.I18N, t = I.t, L = I.L, pick = I.pick, SF = window.ShapeFeat;
 var esc = function(s){ return window.BSA.esc(s); };
-var st = {img: null, box: null, res: null, ai: null, aiBusy: false, scene: null, crops: [], cur: -1, cx: null, cropMode: false, name: ""};
+var st = {imgId: 0, one: null, rgSkip: false, img: null, box: null, res: null, ai: null, aiBusy: false, scene: null, crops: [], cur: -1, cx: null, cropMode: false, name: ""};
 var MAXS = 256, PV = 640;   // analysis size (same as the accuracy tests) / preview size
 
 function render(S){
@@ -11,7 +11,7 @@ function render(S){
     "Give one photo of an object and get a plan — which primitive to start from and how to build it, both with basic modeling and with modifiers.")) + "</p></section>";
   h += '<div class="plan"><div class="pleft"><div class="drop" id="drop"><p>' + esc(t("drop")) + ' <label class="linkbtn">' + esc(t("open")) + '<input type="file" id="file" accept="image/*" hidden></label></p><canvas id="pc" width="10" height="10"></canvas><div class="pctl" id="pctl"></div><p class="mut small" id="boxhint">' +
     esc(pick("물체가 잘 안 잡히면 사진 위를 드래그(휴대폰은 ‘✂️ 영역 고르기’를 켜고 손가락으로)해서 물체를 네모로 지정하세요. 단색 배경 사진이 가장 정확해요. 여러 물체가 있는 그림은 ‘🧩 장면 모드’.",
-      "If the object isn't picked up, drag a box around it (on phones turn on ‘✂️ Pick a region’ and drag with a finger). Plain-background photos work best. Pictures with many objects: ‘🧩 Scene mode’.")) + "</p></div>";
+      "If the object isn't picked up, drag a box around it (on phones turn on ‘✂️ Pick a region’ and drag with a finger). Plain-background photos work best. Pictures with many objects: ‘🧩 Scene mode’.")) + "</p></div>" + cautionHtml();
   if(D.samples && D.samples.length) h += '<div class="samples"><b>' + esc(t("samples")) + "</b><div>" + D.samples.map(function(s, i){ return '<img src="' + s.src + '" data-i="' + i + '" title="' + esc(pick(s.ko, s.en)) + '" alt="' + esc(s.en) + '">'; }).join("") + "</div></div>";
   h += accuracyBox() + "</div><div class='pright' id='pres'>" + emptyRes() + "</div></div>";
   h += '<section class="aibox" id="aibox"></section>';
@@ -27,10 +27,118 @@ function render(S){
   renderCtl();
   if(st.img) analyse(); renderAI();
 }
+/* ---------- caution + on-device AI recognition (SigLIP, siglip.js) ---------- */
+function X(){ return window.SIGLIP && window.SIGLIP.M ? window.SIGLIP : null; }
+function nClasses(){ return X() ? X().M.n : 0; }
+function cautionHtml(){
+  var x = X(), n = nClasses(), A = x && x.M.acc;
+  var h = '<div class="caution" id="caution"><b>📸 ' + esc(pick("사진 넣기 전에 꼭 읽어 주세요", "Please read before adding a photo")) + "</b><p>" +
+    esc(pick("물체 하나가 크고 선명하게 단독으로 찍힌 사진을 넣어주세요. 여러 물체가 섞인 장면·그림은 인식이 틀릴 수 있어요. 목록(" + n + "종)에 없는 물체는 비슷한 다른 이름으로 나올 수 있어요.",
+      "Use a photo where ONE object is shown large and sharp, on its own. Scenes or pictures with many objects mixed together can be recognised wrongly. Objects not in the list (" + n + " kinds) may come out under a similar but different name.")) + "</p>" +
+    '<p class="small">' + esc(pick("장면·그림이라면 ‘🧩 장면 모드’에서 물체를 하나씩 네모로 골라 주세요. 배경이 단순하고 물체가 잘리지 않은 사진이 가장 정확해요.",
+      "For a scene or picture, use ‘🧩 Scene mode’ and box one object at a time. Plain backgrounds and uncropped objects work best.")) + "</p>";
+  if(x){
+    var cs = x.M.classes.slice().sort(function(a, b){ return pick(a.ko, a.en).localeCompare(pick(b.ko, b.en)); });
+    h += '<details class="small"><summary>' + esc(pick("AI가 알아보는 " + n + "종 목록 · 정확도", "The " + n + " kinds the AI knows · accuracy")) + "</summary>";
+    if(A) h += "<p>" + esc(pick("시험 사진 " + A.all.n + "장(단독 물체 사진 " + A.photo.n + "장 + 만화·그림체 " + A.cartoon.n + "장 + 여러 물체가 있는 그림에서 잘라낸 조각 " + A.ki.n + "개)에서 1등 정답 " + A.all.top1_pct + "%, 3등 안 " + A.all.top3_pct + "%. 단독 사진 " + A.photo.top1_pct + "% · 만화체 " + A.cartoon.top1_pct + "% · 그림 속 조각 " + A.ki.top1_pct + "%. ‘확실하지 않음’이 뜨지 않았는데 틀린 경우는 " + A.all.wrong_sure_pct + "%였어요. (같은 사진으로 설정을 골랐기 때문에 처음 보는 사진에서는 조금 낮을 수 있어요.)",
+      "On " + A.all.n + " test images (" + A.photo.n + " single-object photos + " + A.cartoon.n + " cartoons/illustrations + " + A.ki.n + " crops from a busy picture): top-1 " + A.all.top1_pct + "%, top-3 " + A.all.top3_pct + "%. Single photos " + A.photo.top1_pct + "% · cartoons " + A.cartoon.top1_pct + "% · crops from a picture " + A.ki.top1_pct + "%. Wrong without an ‘Not sure’ flag: " + A.all.wrong_sure_pct + "%. (Settings were chosen on these same images, so new photos may score a little lower.)")) + "</p>";
+    h += '<p class="mut">🧸 ' + cs.filter(function(c){ return c.ch; }).map(function(c){ return esc(pick(c.ko, c.en)); }).join(", ") + '</p><p class="mut">📦 ' + cs.filter(function(c){ return !c.ch; }).map(function(c){ return esc(pick(c.ko, c.en)); }).join(", ") + "</p></details>";
+  }
+  return h + "</div>";
+}
+function tgt(){  // current recognition target: {box, rg}
+  if(!st.img) return null;
+  if(st.scene){ var c = st.crops[st.cur]; if(!c) return null; c.rg = c.rg || {}; return {box: c.box, rg: c.rg}; }
+  var key = st.imgId + "|" + (st.box ? st.box.join(",") : "full");
+  if(!st.one || st.one.key !== key) st.one = {key: key};
+  return {box: st.box, rg: st.one};
+}
+function cname(c){ return pick(c.ko, c.en); }
+function pct(x){ return Math.round(x * 100); }
+function recogHtml(T){
+  var x = X(); if(!x) return "";
+  var S = x.S, MB = x.mb(x.totalBytes());
+  if(S.state === "idle"){
+    if(st.rgSkip) return '<div class="recog off"><button class="btn2" id="rg_load">🤖 ' + esc(pick("AI 사진 인식 켜기 (약 " + MB + "MB 한 번 받기)", "Turn on AI recognition (one-time ~" + MB + " MB)")) + "</button></div>";
+    return '<div class="recog ask"><h3>🤖 ' + esc(pick("AI 사진 인식 (SigLIP)", "AI photo recognition (SigLIP)")) + "</h3><p>" +
+      esc(pick("사진 속 물체가 무엇인지 기기 안에서 알아맞혀요(" + nClasses() + "종). 처음 한 번 인식 모델 약 " + MB + "MB를 내려받아요 — 와이파이에서 받는 걸 권장해요. 받은 모델은 브라우저에 저장돼 다음부터는 바로 시작해요. 사진은 서버로 보내지 않아요.",
+        "Recognises what the object is, on your device (" + nClasses() + " kinds). The first time it downloads the recognition model, about " + MB + " MB — Wi-Fi recommended. The model is then kept in your browser so it starts instantly next time. Your photo is never uploaded.")) +
+      '</p><div class="btns"><button class="copybtn" id="rg_load">⬇️ ' + esc(pick("모델 받고 인식하기 (약 " + MB + "MB)", "Download model & recognise (~" + MB + " MB)")) + '</button> <button class="btn2" id="rg_skip">' + esc(pick("모양 매칭만 쓸게요", "Shape matching only")) + "</button></div></div>";
+  }
+  if(S.state === "loading"){
+    var f = S.total ? Math.min(1, S.got / S.total) : 0;
+    return '<div class="recog"><h3>🤖 ' + esc(S.fromCache ? pick("저장된 AI 인식 모델 불러오는 중…", "Loading the saved AI model…") : pick("AI 인식 모델 내려받는 중… (한 번만)", "Downloading the AI model… (one time)")) + '</h3><div class="pbar" id="rg_bar"><i style="width:' + pct(f) + '%"></i></div><p class="small mut" id="rg_txt">' + pct(f) + "% · " + x.mb(S.got) + " / " + MB + " MB</p></div>";
+  }
+  if(S.state === "failed"){
+    var why = S.err === "file://" ? pick("파일을 직접 열면(file://) 브라우저가 모델 파일을 읽지 못해요. 앱 폴더에서 python3 -m http.server 를 실행하고 http://localhost:8000 으로 여세요.", "Opened as a local file (file://), the browser cannot read the model. Run python3 -m http.server in the app folder and open http://localhost:8000.") : pick("이유: ", "Reason: ") + S.err;
+    return '<div class="recog fail"><b>⚠ ' + esc(pick("AI 인식 모델을 불러오지 못했어요", "Could not load the AI recognition model")) + "</b><p class=\"small\">" + esc(why) + "</p><p>" +
+      esc(pick("대신 아래에 예전 오프라인 모양 매칭 결과를 보여 드려요(모양만 비교해서 덜 정확해요).", "Below is the older offline shape matching instead (compares outline only, less accurate).")) + '</p><button class="btn2" id="rg_retry">↻ ' + esc(pick("다시 시도", "Retry")) + "</button></div>";
+  }
+  if(!T) return "";
+  var R = T.rg.rec;
+  if(T.rg.err) return '<div class="recog fail"><b>⚠ ' + esc(pick("인식 오류", "Recognition error")) + "</b> " + esc(T.rg.err) + "</div>";
+  if(!R) return '<div class="recog"><h3>🤖 ' + esc(pick("AI 인식 중…", "Recognising…")) + '</h3><p class="small mut">' + esc(pick("기기 안에서 분석해요. 컴퓨터는 1–2초, 휴대폰은 5초 넘게 걸릴 수 있어요.", "Runs on your device: about 1–2 s on a computer, 5 s or more on a phone.")) + "</p></div>";
+  var pk = T.rg.pick || (R.unsure ? null : R.top[0].k);
+  var h = '<div class="recog res" data-unsure="' + (R.unsure ? 1 : 0) + '"><h2>🤖 ' + esc(pick("AI 인식 결과", "AI recognition")) + "</h2>";
+  if(R.unsure) h += '<div class="unsure"><b>🤔 ' + esc(pick("확실하지 않음", "Not sure")) + "</b> — " + esc(pick("1·2등 점수가 비슷하거나 낮아요. 맞는 이름을 골라 주세요. 후보에 없으면 아래 목록에서 고르세요.", "The top scores are close or low. Pick the right name; if it isn't here, choose from the list below.")) + "</div>";
+  h += '<p class="rkind small">' + esc(R.isChar ? pick("🧸 캐릭터(사람·동물)로 봤어요", "🧸 Looks like a character (person/animal)") : pick("📦 물체로 봤어요", "📦 Looks like an object")) + ' <span class="mut">(' + esc(pick("캐릭터일 확률 ", "character probability ")) + pct(R.pchar) + "%)</span></p>";
+  h += '<div class="rtop">' + R.top.map(function(c, i){
+    return '<button class="rcand' + (c.k === pk ? " on" : "") + '" data-k="' + c.k + '"><span class="rk">' + (i + 1) + '</span><span class="nm">' + esc(cname(c)) + '</span><span class="bar"><i style="width:' + pct(c.score) + '%"></i></span><b>' + pct(c.score) + "%</b></button>";
+  }).join("") + "</div>";
+  var cs = X().M.classes.slice().sort(function(a, b){ return cname(a).localeCompare(cname(b)); });
+  function opts(ch){ return cs.filter(function(c){ return !!c.ch === ch; }).map(function(c){ return '<option value="' + c.k + '"' + (c.k === pk ? " selected" : "") + ">" + esc(cname(c)) + "</option>"; }).join(""); }
+  h += '<label class="small rsel">' + esc(pick("목록에서 직접 고르기", "Choose from the list")) + ' <select id="rg_sel"><option value="">— ' + nClasses() + esc(pick("종 —", " kinds —")) + '</option><optgroup label="' + esc(pick("캐릭터", "Characters")) + '">' + opts(true) + '</optgroup><optgroup label="' + esc(pick("물체", "Objects")) + '">' + opts(false) + "</optgroup></select></label>";
+  h += '<p class="tiny mut">' + esc(pick("점수 = 같은 그룹(캐릭터/물체) 안에서의 상대 확률. ", "Score = relative probability within the group (character/object). ")) + "SigLIP (Google, Apache-2.0) · " + esc(pick("기기 안에서 ", "on-device ")) + R.ms + " ms</p>";
+  h += pk ? planFor(X().cls(pk)) : '<p class="mut">' + esc(pick("후보를 고르면 그 물체의 모델링 계획이 나와요.", "Pick a candidate to see its modeling plan.")) + "</p>";
+  return h + "</div>";
+}
+function sobj(id){ return (D.scene_objects || []).filter(function(o){ return o.id === id; })[0]; }
+function planFor(c){
+  if(!c) return "";
+  var m = c.ex && model(c.ex), so = c.so && sobj(c.so), sm = c.sim && model(c.sim);
+  var h = '<div class="rplan"><h3>🛠 ' + esc(pick("‘" + c.ko + "’ 만드는 법", "How to build: " + c.en)) + "</h3>";
+  if(m) h += '<p class="small okc">✅ ' + esc(pick("검증된 예제가 있어요 (Blender 5.3에서 스크립트를 실제로 실행).", "There is a verified example (script actually run in Blender 5.3).")) + "</p>" + bestHtml(m);
+  else if(so) h += sobjHtml(so, true);
+  else if(c.ch) h += "<p>" + esc(pick("캐릭터는 고급 작업이에요. 보통 구(머리)·구/원기둥(몸)으로 큰 덩어리를 잡고 Subdivision Surface로 부드럽게 한 뒤, 스컬프트 모드에서 얼굴·귀·꼬리 모양을 다듬어요. 아래 비슷한 캐릭터 안내를 참고하세요.",
+      "Characters are advanced: block out the big shapes with spheres (head) and spheres/cylinders (body), smooth with Subdivision Surface, then refine face, ears and tail in Sculpt Mode. See the similar character guide below.")) + "</p>" + sobjHtml(sobj(c.k === "person" || c.k === "robot" ? "person" : "cat"), true);
+  if(!m && sm) h += '<details class="rsim"><summary>' + esc(pick("검증된 예제는 없어요 — 모양이 비슷한 예제: ", "No verified example — a similar-shaped example: ") + cname(sm)) + "</summary>" + bestHtml(sm) + "</details>";
+  if(!m && !so && !c.ch && !sm) h += '<p class="mut">' + esc(pick("이 물체의 예제는 아직 없어요. 아래 ‘모양 매칭’ 결과에서 모양이 비슷한 예제를 참고하세요.", "No example for this object yet. See the shape-matching results below for similar shapes.")) + "</p>";
+  return h + "</div>";
+}
+function shapeWrap(inner){
+  var x = X(); if(!inner) return "";
+  if(x && x.S.state === "ready") return '<details class="shapefb"><summary>📐 ' + esc(pick("모양 매칭(오프라인) 결과도 보기 — 참고용", "Also show offline shape matching — for reference")) + "</summary>" + inner + "</details>";
+  return inner;
+}
+function recogKick(){
+  var x = X(); if(!x || !st.img || !document.getElementById("pres")) return;
+  if(x.S.state === "idle" && !st.rgSkip){ if(x.wanted()) x.load().catch(function(){}); else x.isCached().then(function(c){ if(c && x.S.state === "idle") x.load().catch(function(){}); }); return; }
+  if(x.S.state !== "ready") return;
+  var jobs = [];
+  if(st.scene) st.crops.forEach(function(c){ c.rg = c.rg || {}; jobs.push({box: c.box, rg: c.rg}); });
+  else { var T = tgt(); if(T) jobs.push(T); }
+  var id = st.imgId;
+  jobs.forEach(function(T){
+    if(T.rg.rec || T.rg.busy || T.rg.err) return; T.rg.busy = true;
+    x.classify(st.img, T.box).then(function(r){ T.rg.rec = r; }, function(e){ T.rg.err = (e && e.message) || String(e); })
+      .then(function(){ T.rg.busy = false; if(id === st.imgId && document.getElementById("pres")) analyse(); });
+  });
+}
+function refreshRecog(){
+  var el = document.getElementById("recog"); if(!el) return;
+  var x = X();
+  if(x && x.S.state === "loading" && document.getElementById("rg_bar")){
+    var f = x.S.total ? Math.min(1, x.S.got / x.S.total) : 0;
+    document.querySelector("#rg_bar i").style.width = pct(f) + "%"; document.getElementById("rg_txt").textContent = pct(f) + "% · " + x.mb(x.S.got) + " / " + x.mb(x.totalBytes()) + " MB"; return;
+  }
+  analyse();
+}
+var lastState = null;
+if(window.SIGLIP) window.SIGLIP.on(function(S){ if(!document.getElementById("pres") || !st.img){ lastState = S.state; return; } if(S.state === "loading" && lastState === "loading") refreshRecog(); else { lastState = S.state; refreshRecog(); } lastState = S.state; });
 function emptyRes(){ return '<div class="placeholder">' + esc(pick("← 사진을 넣으면 여기에 계획이 나와요.", "← Your plan appears here.")) + "</div>"; }
 function accuracyBox(){
   var A = D.accuracy; if(!A) return "";
-  return '<details class="acc"><summary>📏 ' + esc(t("acc_title")) + ": top-1 " + A.top1 + "% · top-3 " + A.top3 + "% (" + A.n + (L === "en" ? " photos" : "장") + ")</summary><p>" +
+  return '<details class="acc"><summary>📏 ' + esc(pick("모양 매칭(예비 방식) 정확도 (솔직하게)", "Shape matching (fallback) accuracy (honestly)")) + ": top-1 " + A.top1 + "% · top-3 " + A.top3 + "% (" + A.n + (L === "en" ? " photos" : "장") + ")</summary><p>" +
     esc(pick("인터넷 공개 사진(위키미디어 공용, 출처 기록) " + A.n + "장으로 측정했어요. ‘정답’은 사진 속 물체와 같은 예제가 1등(top-1) 또는 3등 안(top-3)에 나온 비율이에요. 배경이 복잡하거나 물체가 잘린 사진에서는 많이 틀려요. 모양만 보는 방식이라 색·재질은 구분하지 못해요. 우연히 맞힐 확률은 top-1 " + A.chance1 + "%, top-3 " + A.chance3 + "%예요.",
       "Measured on " + A.n + " public photos (Wikimedia Commons, sources recorded). Correct = the matching example ranked 1st (top-1) or within the first 3 (top-3). It often fails on busy backgrounds or cropped objects, and it only looks at outline shape, not colour or material. Chance level: top-1 " + A.chance1 + "%, top-3 " + A.chance3 + "%.")) +
     (A.test ? "<br>" + esc(pick("설정값은 홀수 번 사진(" + A.dev.n + "장)으로만 맞추고, 짝수 번 사진(" + A.test.n + "장, 시험용)으로 따로 쟀어요 → 시험용: top-1 " + A.test.top1 + "% · top-3 " + A.test.top3 + "% · top-5 " + A.test.top5 + "%.",
@@ -54,7 +162,7 @@ function loadURL(u){
   im.onload = function(){
     if(!im.naturalWidth || !im.naturalHeight){ showErr(pick("이미지를 읽지 못했어요.", "Could not read the image.")); return; }
     if(im.naturalWidth * im.naturalHeight > LIM.px){ showErr(pick("이미지가 너무 커요 (5천만 화소까지).", "Image too large (max 50 megapixels).")); return; }
-    st.img = im; st.box = null; st.ai = null; st.scene = null; st.crops = []; st.cur = -1; st.cx = null; analyse(); renderAI(); renderCtl();
+    st.img = im; st.imgId++; st.one = null; st.box = null; st.ai = null; st.scene = null; st.crops = []; st.cur = -1; st.cx = null; analyse(); renderAI(); renderCtl();
   };
   im.onerror = function(){ showErr(pick("이 형식은 브라우저가 열 수 없어요 (PNG·JPG·WebP·GIF는 돼요). HEIC는 JPG로 바꿔 주세요.", "Your browser can't open this format (PNG/JPG/WebP/GIF work). Convert HEIC to JPG.")); };
   im.src = u;
@@ -104,7 +212,7 @@ function analyse(){
         st.cx = SF.complexity(r.data, r.W, r.H, m);
         st.res = f ? {f: f, top: SF.match(f, D.shape_lib, 5), hints: SF.hints(f)} : null; drawPreview(m, r.W, r.H);
       }
-      pres.innerHTML = (st.res ? (!st.box && st.cx && st.cx.likely && st.scene === null ? sceneAsk() : (st.res.top[0] && sim(st.res.top[0]) < 45 ? lowConf(st.res.top[0]) : "")) + resultHtml(st.res)
+      pres.innerHTML = '<div id="recog">' + recogHtml(tgt()) + "</div>" + (st.res ? (!st.box && st.cx && st.cx.likely && st.scene === null ? sceneAsk() : (st.res.top[0] && sim(st.res.top[0]) < 45 ? lowConf(st.res.top[0]) : "")) + shapeWrap(resultHtml(st.res))
         : '<div class="placeholder bad">' + esc(pick("물체를 찾지 못했어요. 영역을 드래그로 지정하거나 ‘🧩 장면 모드’를 써 보세요.", "Could not find an object. Drag a box around it, or try ‘🧩 Scene mode’.")) + "</div>");
     } else {
       if(!st.res){ var r0 = toCanvas(), m0 = SF.segment(r0.data, r0.W, r0.H, null), f0 = SF.features(m0, r0.W, r0.H); st.res = f0 ? {f: f0, top: SF.match(f0, D.shape_lib, 5), hints: SF.hints(f0)} : null; }
@@ -114,7 +222,7 @@ function analyse(){
     pres.innerHTML = '<div class="placeholder bad">⚠ ' + esc(pick("분석 중 오류: ", "Analysis error: ") + (e && e.message || e)) + "</div>";
     if(window.console) console.warn(e);
   }
-  window.BSA.bindLB(pres); bindPlan(); renderCtl();
+  window.BSA.bindLB(pres); bindPlan(); renderCtl(); recogKick();
 }
 function sceneAsk(){
   return '<div class="scenewarn"><b>🧩 ' + esc(pick("여러 물체가 있는 장면(그림)일 수 있어요", "This may be a scene (picture) with many objects")) + "</b><p>" +
@@ -156,29 +264,34 @@ function setScene(on){ st.scene = on; if(on){ st.cropMode = true; st.box = null;
 function sceneHtml(){
   var h = '<h2>🧩 ' + esc(pick("장면 모드 — 물체별로 계획하기", "Scene mode — plan object by object")) + "</h2>";
   h += '<div class="scenewarn"><p>' + esc(pick("이 앱의 오프라인 분석은 그림 속 물체를 스스로 찾지 못해요(모양 매칭은 물체 하나용). 그래서 두 가지 방법을 드려요: ① 그림에서 물체 하나를 네모로 고르면 그 부분만 잘라 예제와 비교해요. ② 아래 ‘장면에 자주 나오는 물체’ 목록에서 그림에 있는 것을 골라 계획을 보세요. 실제로 그림 속 물체 목록이 필요하면 아래 AI 모드(내 API 키)를 쓰세요.",
-    "The offline analysis cannot find objects in a picture by itself (shape matching is for one object). So: ① box one object in the picture and only that crop is compared with the examples; ② pick what's in your picture from ‘Objects common in scenes’ below to see a plan. For a real list of what's in the picture, use AI mode below (your API key).")) + "</p></div>";
+    "The offline analysis cannot find objects in a picture by itself (shape matching is for one object). So: ① box one object in the picture and only that crop is compared with the examples; ② pick what's in your picture from ‘Objects common in scenes’ below to see a plan. For a real list of what's in the picture, use AI mode below (your API key).")) + "</p>" +
+    (X() ? "<p>🤖 " + esc(pick("AI 사진 인식(켜져 있으면)도 그림 전체에서 물체를 스스로 찾아내지는 못해요. 네모로 고른 영역 하나하나의 이름을 후보 3개와 점수로 맞혀요 — 물체에 딱 맞게, 하나만 들어가게 고르세요.",
+      "AI recognition (when on) also can't find objects in the whole picture by itself. It names each boxed region with 3 scored candidates — box tightly, one object per box.")) + "</p>" : "") + "</div>";
   h += '<h3>① ' + esc(pick("고른 영역", "Picked regions")) + " (" + st.crops.length + "/8)</h3>";
   if(!st.crops.length) h += '<p class="placeholder">' + esc(pick("← 왼쪽 그림에서 물체 하나(예: 머그컵, 둥근 창문, 랜턴)를 드래그해서 네모로 감싸세요. 휴대폰은 ‘✂️ 영역 고르기’가 켜진 상태에서 손가락으로 드래그.", "← Drag a box around one object in the picture (e.g. the mug, the round window, the lantern). On phones keep ‘✂️ Pick a region’ on and drag with a finger.")) + "</p>";
   else {
     h += '<div class="crops">' + st.crops.map(function(c, i){
-      var t1 = c.top[0], m = t1 && model(t1.id);
-      return '<button class="crop' + (i === st.cur ? " on" : "") + '" data-i="' + i + '"><span class="rk">' + (i + 1) + '</span><img src="' + c.thumb + '" alt=""><span class="nm">' + (m ? esc(pick(m.ko, m.en)) + "<small>" + sim(t1) + "%" + (sim(t1) < 50 ? " · " + esc(pick("낮음", "low")) : "") + "</small>" : esc(pick("물체 못 찾음", "no object"))) + '</span><span class="x" data-x="' + i + '" title="remove">✕</span></button>';
+      var t1 = c.top[0], m = t1 && model(t1.id), R = c.rg && c.rg.rec, ai = R && X() && X().S.state === "ready" ? (c.rg.pick ? X().cls(c.rg.pick) : R.top[0]) : null;
+      return '<button class="crop' + (i === st.cur ? " on" : "") + '" data-i="' + i + '"><span class="rk">' + (i + 1) + '</span><img src="' + c.thumb + '" alt=""><span class="nm">' + (ai ? "🤖 " + esc(cname(ai)) + "<small>" + (c.rg.pick ? esc(pick("직접 고름", "picked")) : (R.unsure ? "🤔 " + esc(pick("확실하지 않음", "not sure")) : pct(R.top[0].score) + "%")) + "</small>" : m ? esc(pick(m.ko, m.en)) + "<small>" + sim(t1) + "%" + (sim(t1) < 50 ? " · " + esc(pick("낮음", "low")) : "") + "</small>" : esc(pick("물체 못 찾음", "no object"))) + '</span><span class="x" data-x="' + i + '" title="remove">✕</span></button>';
     }).join("") + "</div>";
     var c = st.crops[st.cur];
-    if(c && c.f) h += '<div class="cropres">' + (c.top[0] && sim(c.top[0]) < 50 ? lowConf(c.top[0]) : "") + resultHtml(c) + "</div>";
+    if(c) h += '<div id="recog">' + recogHtml(tgt()) + "</div>";
+    if(c && c.f) h += '<div class="cropres">' + (c.top[0] && sim(c.top[0]) < 50 ? lowConf(c.top[0]) : "") + shapeWrap(resultHtml(c)) + "</div>";
     else if(c) h += '<div class="placeholder bad">' + esc(pick("이 영역에서 물체 모양을 찾지 못했어요. 물체에 더 딱 맞게 다시 골라 보세요.", "No object outline found in this region. Try a tighter box.")) + "</div>";
   }
   h += '<h3>② ' + esc(pick("장면에 자주 나오는 물체 — 그림에 있는 것을 골라 보세요", "Objects common in scenes — pick what's in your picture")) + "</h3>";
   h += '<p class="mut small">' + esc(pick("일반적인 목록이에요(이 그림에서 찾아낸 것이 아님). ★ = 난이도. 캐릭터(사람·동물)는 고급 작업이라 따로 표시했어요.", "A generic list (not detected in your picture). ★ = difficulty. Characters (people/animals) are advanced and marked.")) + "</p>";
-  h += '<div class="sobjs">' + (D.scene_objects || []).map(function(o){
+  h += '<div class="sobjs">' + (D.scene_objects || []).map(function(o){ return sobjHtml(o, false); }).join("") + "</div>";
+  if(st.res) h += '<details class="mut"><summary>' + esc(pick("참고: 그림 전체를 물체 하나로 봤을 때의 결과 (장면에서는 거의 의미 없음)", "For reference: the whole picture treated as one object (mostly meaningless for scenes)")) + "</summary>" + resultHtml(st.res) + "</details>";
+  return h;
+}
+function sobjHtml(o, open){
+    if(!o) return "";
     var m = o.ex && model(o.ex);
-    return '<details class="sobj' + (o.kind === "character" ? " char" : "") + '"><summary><b>' + esc(pick(o.ko, o.en)) + '</b> <span class="chip">' + esc(o.prim) + '</span> <span class="mut small">' + "★".repeat(o.diff) + "</span>" + (o.kind === "character" ? ' <span class="badge bad">' + esc(pick("캐릭터 = 고급(스컬프팅)", "Character = advanced (sculpting)")) + "</span>" : "") + "</summary>" +
+    return '<details class="sobj' + (o.kind === "character" ? " char" : "") + '"' + (open ? " open" : "") + '><summary><b>' + esc(pick(o.ko, o.en)) + '</b> <span class="chip">' + esc(o.prim) + '</span> <span class="mut small">' + "★".repeat(o.diff) + "</span>" + (o.kind === "character" ? ' <span class="badge bad">' + esc(pick("캐릭터 = 고급(스컬프팅)", "Character = advanced (sculpting)")) + "</span>" : "") + "</summary>" +
       '<p>🔧 <b>' + esc(t("basic")) + ":</b> " + esc(pick(o.basic[0], o.basic[1])) + "</p><p>🧱 <b>" + esc(t("modifier")) + ":</b> " + esc(pick(o.mod[0], o.mod[1])) + '</p><div class="hhow">⌨️ ' + window.BSA.kbd(pick(o.how[0], o.how[1])) + "</div>" +
       (m ? '<a class="linkbtn small" href="#model/ex/' + m.id + '">' + esc(pick("검증된 예제(단계 이미지): ", "Verified example (step images): ") + pick(m.ko, m.en)) + " →</a>" : "") +
       (o.st || []).map(function(sid){ var x = (D.starts || []).filter(function(e){ return e.id === sid; })[0]; return x ? ' <a class="linkbtn small" href="#model/st/' + x.id + '">' + esc(pick("비슷한 시작 타입 예제: ", "Related start-type example: ") + pick(x.ko, x.en)) + " →</a>" : ""; }).join("") + "</details>";
-  }).join("") + "</div>";
-  if(st.res) h += '<details class="mut"><summary>' + esc(pick("참고: 그림 전체를 물체 하나로 봤을 때의 결과 (장면에서는 거의 의미 없음)", "For reference: the whole picture treated as one object (mostly meaningless for scenes)")) + "</summary>" + resultHtml(st.res) + "</details>";
-  return h;
 }
 function model(id){ return D.models.filter(function(m){ return m.id === id; })[0]; }
 function featChips(f){
@@ -217,6 +330,12 @@ function bestHtml(m){
     '<div class="mcols view-both compact">' + window.BSA.methodCol(m, "basic", true) + window.BSA.methodCol(m, "modifier", true) + "</div></div>";
 }
 function bindPlan(){
+  var rl = document.getElementById("rg_load"); if(rl) rl.onclick = function(){ st.rgSkip = false; window.SIGLIP.load().catch(function(){}); };
+  var rs = document.getElementById("rg_skip"); if(rs) rs.onclick = function(){ st.rgSkip = true; analyse(); };
+  var rr = document.getElementById("rg_retry"); if(rr) rr.onclick = function(){ window.SIGLIP.S.state = "idle"; window.SIGLIP.load().catch(function(){}); };
+  function setPick(k){ var T = tgt(); if(T){ T.rg.pick = k || null; analyse(); } }
+  document.querySelectorAll(".rcand").forEach(function(b){ b.onclick = function(){ setPick(b.getAttribute("data-k")); }; });
+  var sel = document.getElementById("rg_sel"); if(sel) sel.onchange = function(){ setPick(sel.value); };
   var gs = document.getElementById("goscene"); if(gs) gs.onclick = function(){ setScene(true); };
   var sg = document.getElementById("single"); if(sg) sg.onclick = function(){ st.scene = false; analyse(); };
   document.querySelectorAll(".crop").forEach(function(b){ b.onclick = function(e){ var x = e.target.getAttribute("data-x"); if(x != null){ st.crops.splice(+x, 1); st.cur = Math.min(st.cur, st.crops.length - 1); } else st.cur = +b.getAttribute("data-i"); analyse(); }; });
