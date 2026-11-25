@@ -80,7 +80,8 @@ var mo = null, moT = 0;
 function watch(p){
   if(mo) mo.disconnect(); clearTimeout(moT); if(!p || !window.MutationObserver) return;
   var k = cur;
-  mo = new MutationObserver(function(){ if(k !== cur) return; remember(); restoreUI(p); });
+  /* key() check: a new page's render (inside the app's hashchange handler) must not be matched against the old page's saved values */
+  mo = new MutationObserver(function(){ if(k !== cur || key() !== k) return; remember(); restoreUI(p); });
   mo.observe(main, {childList: true, subtree: true});
   moT = setTimeout(function(){ if(mo){ mo.disconnect(); mo = null; } }, 4000);
 }

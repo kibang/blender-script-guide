@@ -11,3 +11,10 @@
 a.ref{font-size:12px;margin-left:2px}
 .imm-cards .cb p{-webkit-line-clamp:4}
 @media (max-width: 820px){ .imm-facts{grid-template-columns:minmax(0,1fr)} }
+
+/* original exhibition: venue · year */
+.imm-where{list-style:none;margin:4px 0 6px;padding:0;font-size:12px;line-height:1.45;color:#e9c46a}
+.imm-where li{margin:2px 0;overflow-wrap:anywhere}
+.imm-wherebox{margin:14px 0;border-color:#6b5a2a}
+.imm-wherebox ul{margin:6px 0 4px;padding-left:18px}
+.imm-wherebox li{margin:4px 0;overflow-wrap:anywhere}
