@@ -6,7 +6,7 @@ function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c
 var K = {
  ko: {
   h: "🧩 블렌더 애드온: 예제를 버튼 하나로",
-  lead: "이 사이트의 <b>스크립트 100개, 모델링 예제 90개(45개 × 두 가지 방법), 시작 타입 예제 26개</b>를 블렌더 안에서 바로 만들어 주는 애드온이에요. 3D 뷰 오른쪽 사이드바(<kbd>N</kbd>)에서 예제를 골라 <b>만들기</b>를 누르거나, 이 사이트에서 <b>📋 코드 복사</b>를 누른 뒤 블렌더에서 <b>클립보드에서 붙여넣어 만들기</b>를 누르면 돼요. Text Editor를 열고 붙여넣고 실행하는 과정이 버튼 하나로 줄어요.",
+  lead: "이 사이트의 <b>스크립트 {S}개, 모델링 예제 {M2}개({M}개 × 두 가지 방법), 시작 타입 예제 {ST}개</b>를 블렌더 안에서 바로 만들어 주는 애드온이에요. 3D 뷰 오른쪽 사이드바(<kbd>N</kbd>)에서 예제를 골라 <b>만들기</b>를 누르거나, 이 사이트에서 <b>📋 코드 복사</b>를 누른 뒤 블렌더에서 <b>클립보드에서 붙여넣어 만들기</b>를 누르면 돼요. Text Editor를 열고 붙여넣고 실행하는 과정이 버튼 하나로 줄어요.",
   dl: "⬇ 애드온 받기", ver: "블렌더 4.2 ~ 5.3에서 써요 (5.3과 4.5에서 시험함). 블렌더 언어가 한국어면 한국어로, 아니면 영어로 나와요.",
   inst: "설치 (처음 한 번만)",
   i: ["블렌더에서 <kbd>Edit</kbd> › <kbd>Preferences…</kbd> › 왼쪽 <b>Get Extensions</b>(또는 <b>Add-ons</b>)를 눌러요.",
@@ -39,7 +39,7 @@ var K = {
  },
  en: {
   h: "🧩 Blender add-on: every example in one click",
-  lead: "This add-on builds <b>all 100 scripts, 90 modeling examples (45 × two methods) and 26 start-type examples</b> of this site right inside Blender. Pick an example in the 3D View sidebar (<kbd>N</kbd>) and press <b>Build</b>, or press <b>📋 Copy code</b> on this site and then <b>Paste from Clipboard & Build</b> in Blender. Opening the Text Editor, pasting and running becomes one button.",
+  lead: "This add-on builds <b>all {S} scripts, {M2} modeling examples ({M} × two methods) and {ST} start-type examples</b> of this site right inside Blender. Pick an example in the 3D View sidebar (<kbd>N</kbd>) and press <b>Build</b>, or press <b>📋 Copy code</b> on this site and then <b>Paste from Clipboard & Build</b> in Blender. Opening the Text Editor, pasting and running becomes one button.",
   dl: "⬇ Download the add-on", ver: "Works in Blender 4.2 – 5.3 (tested in 5.3 and 4.5). Korean when Blender's interface is Korean, English otherwise.",
   inst: "Install (once)",
   i: ["In Blender open <kbd>Edit</kbd> › <kbd>Preferences…</kbd> › <b>Get Extensions</b> (or <b>Add-ons</b>) on the left.",
@@ -78,10 +78,10 @@ function figs(list){
   }).join("");
 }
 window.BSA_ADDON = function(M){
-  var A = (window.APP_DATA || {}).addon || {}, k = K[L] || K.ko;
+  var AD_ = window.APP_DATA || {scripts: [], models: []}, A = AD_.addon || {}, k = K[L] || K.ko;
   var li = function(a){ return "<ol>" + a.map(function(x){ return "<li>" + x + "</li>"; }).join("") + "</ol>"; };
   var ul = function(a){ return "<ul>" + a.map(function(x){ return "<li>" + x + "</li>"; }).join("") + "</ul>"; };
-  var h = '<section class="intro addon"><h1>' + k.h + "</h1><p>" + k.lead + "</p>";
+  var h = '<section class="intro addon"><h1>' + k.h + "</h1><p>" + k.lead.replace("{S}", AD_.scripts.length).replace("{M2}", AD_.models.length * 2).replace("{M}", AD_.models.length).replace("{ST}", (AD_.starts || []).length) + "</p>";
   if(A.zip) h += '<p><a class="copybtn dl" id="addon-dl" href="addon/' + esc(A.zip) + '" download>' + k.dl + "</a> <span class=\"mut\">" + esc(A.zip) + " · " + A.kb + " " + k.kb + " · v" + esc(A.version) + "</span></p>";
   h += '<p class="mut">' + k.ver + "</p></section>";
   var shots = A.shots || [];
