@@ -8,7 +8,7 @@ function lab(pair){ return Array.isArray(pair) ? pick(pair[0], pair[1]) : pair; 
 document.documentElement.lang = L;
 document.title = t("title") + " (Blender 5.3)";
 $("#t-title").textContent = t("title");
-$("#tab-scripts").textContent = t("tab_scripts"); $("#tab-model").textContent = t("tab_model");
+$("#tab-scripts").textContent = t("tab_scripts"); $("#tab-model").textContent = t("tab_model"); if($("#tab-addon")) $("#tab-addon").textContent = t("tab_addon");
 $("#lang-" + L).classList.add("on");
 // keep the hash when switching language
 ["ko", "en"].forEach(function(l){ var a = $("#lang-" + l); a.onclick = function(e){ e.preventDefault(); try { localStorage.setItem("bsa.lang", l); } catch(x){} location.href = "?lang=" + l + location.hash; }; });
@@ -96,7 +96,7 @@ function copy(text, btn){
   if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
   function fallback(){ var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch(e){} document.body.removeChild(ta); }
 }
-window.BSA = {esc: esc, copy: copy, hl: hl};
+window.BSA = {esc: esc, copy: copy, hl: hl, hlLines: hlLines, explainHTML: explainHTML, bindExplain: bindExplain, fig: fig, stars: stars};
 
 /* ---------- lightbox ---------- */
 var LB = {list: [], i: 0};
@@ -119,9 +119,10 @@ function bindLB(root){
 /* ---------- routing ---------- */
 function route(){
   var h = location.hash.replace(/^#\/?/, "") || "scripts", p = h.split("/");
-  document.querySelectorAll("#tabs a").forEach(function(a){ a.classList.toggle("on", a.getAttribute("data-tab") === (p[0] === "model" ? "model" : "scripts")); });
+  document.querySelectorAll("#tabs a").forEach(function(a){ a.classList.toggle("on", a.getAttribute("data-tab") === (p[0] === "model" ? "model" : p[0] === "addon" ? "addon" : "scripts")); });
   var M = $("#main"); window.scrollTo(0, 0);
-  if(p[0] === "model") renderModel(M, p[1] || "plan", p[2]);
+  if(p[0] === "addon" && window.BSA_ADDON) window.BSA_ADDON(M);
+  else if(p[0] === "model") renderModel(M, p[1] || "plan", p[2]);
   else if(p[1] === "glossary") renderPyGlossary(M, p[2]);
   else if(p[1]) renderScript(M, p[1]); else renderScripts(M);
   bindLB(M);
@@ -210,7 +211,7 @@ function renderScript(M, id){
   h += '<article class="detail"><div class="meta big"><span class="num">' + s.id + '</span><span class="cat">' + esc(I.cat(s.cat)) + '</span><span class="lv">' + stars(s.lvl) + " " + esc(I.lvl(s.lvl)) + "</span>" + (s.verify === "pass" ? '<span class="badge ok">✓ ' + esc(t("verified")) + (s.check === "passed" ? " · " + esc(pick("결과 자동 검사 통과", "automatic result check passed")) : "") + "</span>" : '<span class="badge bad">' + esc(t("notdone")) + "</span>") + "</div>";
   h += "<h1>" + esc(pick(s.ko, s.en)) + '</h1><p class="sub">' + esc(pick(s.en, s.ko)) + "</p>";
   h += '<p class="lead">' + esc(pick(s.dko, s.den)) + "</p>";
-  h += '<div class="two"><div class="codecol"><div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" id="cp">📋 ' + esc(t("copy")) + '</button></div><pre class="code numbered"><code>' + hlLines(s.code) + "</code></pre>" + explainHTML(s) + howto() + "</div>";
+  h += '<div class="two"><div class="codecol"><div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" id="cp">📋 ' + esc(t("copy")) + '</button></div>' + (window.BSA_ADDON_HINT ? window.BSA_ADDON_HINT() : "") + '<pre class="code numbered"><code>' + hlLines(s.code) + "</code></pre>" + explainHTML(s) + howto() + "</div>";
   h += '<div class="imgcol"><h2>' + esc(t("result")) + "</h2>";
   var bef = imgs.filter(function(x){ return x.stage === "before"; }), mid = imgs.filter(function(x){ return /^(step|frame)/.test(x.stage); }), aft = imgs.filter(function(x){ return x.stage === "after"; });
   if(bef.length) h += '<h3 class="stage-h">① ' + esc(t("before")) + '</h3><div class="shots">' + bef.map(function(x){ return fig(x, "s"); }).join("") + "</div>";
@@ -226,9 +227,9 @@ function renderScript(M, id){
 
 /* ================= Modeling tab ================= */
 function renderModel(M, sub, arg){
-  var h = '<div class="subtabs">' + [["plan", "sub_plan"], ["examples", "sub_examples"], ["starts", "sub_starts"], ["gallery", "sub_gallery"], ["keys", "sub_keys"]].map(function(x){ return '<a href="#model/' + x[0] + '" class="' + (sub === x[0] || (sub === "ex" && x[0] === "examples") || (sub === "st" && x[0] === "starts") ? "on" : "") + '">' + esc(t(x[1])) + "</a>"; }).join("") + "</div><div id='msub'></div>";
+  var h = '<div class="subtabs">' + [["plan", "sub_plan"], ["examples", "sub_examples"], ["starts", "sub_starts"], ["gallery", "sub_gallery"], ["keys", "sub_keys"]].concat(window.BSA_IMM ? [["immersive", ""]] : []).map(function(x){ return '<a href="#model/' + x[0] + '" class="' + (sub === x[0] || (sub === "ex" && x[0] === "examples") || (sub === "st" && x[0] === "starts") || (sub === "im" && x[0] === "immersive") ? "on" : "") + '">' + esc(x[0] === "immersive" ? window.BSA_IMM.label() : t(x[1])) + "</a>"; }).join("") + "</div><div id='msub'></div>";
   M.innerHTML = h; var S = $("#msub");
-  if(sub === "gallery") renderGallery(S); else if(sub === "keys") renderKeys(S); else if(sub === "examples") renderExamples(S); else if(sub === "ex") renderExample(S, arg); else if(sub === "starts") renderStarts(S, arg); else if(sub === "st") renderStart(S, arg); else window.PLAN.render(S);
+  if(sub === "immersive" && window.BSA_IMM) window.BSA_IMM.list(S); else if(sub === "im" && window.BSA_IMM) window.BSA_IMM.detail(S, arg); else if(sub === "gallery") renderGallery(S); else if(sub === "keys") renderKeys(S); else if(sub === "examples") renderExamples(S); else if(sub === "ex") renderExample(S, arg); else if(sub === "starts") renderStarts(S, arg); else if(sub === "st") renderStart(S, arg); else window.PLAN.render(S);
 }
 function exRender(m, meth){ var x = m.methods[meth]; if(!x) return null; return x.imgs.filter(function(i){ return i.kind === "render"; })[0]; }
 function renderExamples(S){
@@ -253,7 +254,7 @@ function methodCol(m, meth, compact){
   }).join("") + "</ol>";
   if(rend) h += '<figure class="shot final" data-lb="' + m.id + meth + '" data-src="' + rend.src + '" data-cap="' + esc(t("final")) + '"><img loading="lazy" src="' + rend.th + '" alt=""><figcaption>' + esc(t("final")) + " (Cycles)</figcaption></figure>";
   if(!compact){
-    h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" data-copy="' + meth + '">📋 ' + esc(t("full_code")) + '</button></div><pre class="code small"><code>' + hl(x.code) + "</code></pre>";
+    h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" data-copy="' + meth + '">📋 ' + esc(t("full_code")) + '</button></div>' + (window.BSA_ADDON_HINT ? window.BSA_ADDON_HINT() : "") + '<pre class="code small"><code>' + hl(x.code) + "</code></pre>";
   }
   return h + "</div>";
 }
@@ -273,21 +274,17 @@ function modPath(label){
 window.BSA.modPath = modPath; window.BSA.kbd = kbd;
 function renderKeys(S){
   var G = D.glossary || {keys: [], mods: []};
-  var sec = {mode: ["모드·선택", "Modes & selection"], add: ["추가·복제·삭제", "Add, duplicate, delete"], xf: ["이동·회전·크기", "Move, rotate, scale"], edit: ["Edit Mode 도구", "Edit Mode tools"], obj: ["Object Mode", "Object Mode"], nm: ["커브·글자·메타볼·노드·뼈대", "Curves, text, metaballs, nodes, bones"]};
-  var h = '<section class="intro"><h1>' + esc(t("sub_keys")) + "</h1><p>" + esc(pick("예제와 계획에 나오는 단축키·메뉴 경로를 한곳에 모았어요. 모두 Blender 5.3 기본 키맵(keymap_data/blender_default.py)과 메뉴 소스(bl_ui)로 확인했습니다. 단축키는 3D 뷰포트 위에 마우스가 있을 때 동작해요.",
-    "Every shortcut and menu path used in the examples and plans, in one place. All checked against Blender 5.3's default keymap (keymap_data/blender_default.py) and menu sources (bl_ui). Shortcuts work with the mouse over the 3D Viewport.")) + "</p></section>";
-  Object.keys(sec).forEach(function(k){
-    h += '<h2 class="gh">' + esc(pick(sec[k][0], sec[k][1])) + '</h2><table class="keys"><tbody>' + G.keys.filter(function(g){ return g[0] === k; }).map(function(g){ return "<tr><th>" + kbd(g[1].split(" | ")[L === "en" && g[1].indexOf(" | ") > 0 ? 1 : 0]) + "</th><td>" + esc(pick(g[2], g[3])) + "</td></tr>"; }).join("") + "</tbody></table>";
-  });
-  h += '<h2 class="gh">🔧 ' + esc(pick("모디파이어: 어디서·어떻게", "Modifiers: where & how")) + '</h2><ol class="modhow"><li>' + kbd(pick("오브젝트 선택(Object Mode) → Properties 편집기(보통 오른쪽 아래) → Modifier 탭(🔧 파란 렌치) → Add Modifier → 분류(Edit / Generate / Deform / Normals / Physics) → 이름. 메뉴가 열린 상태에서 바로 글자를 치면 검색돼요.",
+  /* shortcuts: every Blender default keymap item (keys.js + keymap.js); our curated key tables were removed */
+  var h = '<div id="kroot"></div><details class="modfold"><summary>' + esc(pick("🔧 모디파이어 메뉴 경로 (Add Modifier 어디서·어떻게)", "🔧 Modifier menu paths (Add Modifier: where & how)")) + '</summary>';
+  h += '<ol class="modhow"><li>' + kbd(pick("오브젝트 선택(Object Mode) → Properties 편집기(보통 오른쪽 아래) → Modifier 탭(🔧 파란 렌치) → Add Modifier → 분류(Edit / Generate / Deform / Normals / Physics) → 이름. 메뉴가 열린 상태에서 바로 글자를 치면 검색돼요.",
     "Select the object (Object Mode) → Properties editor (usually bottom right) → Modifier tab (🔧 blue wrench) → Add Modifier → category (Edit / Generate / Deform / Normals / Physics) → name. Typing while the menu is open searches it.")) + "</li><li>" +
     kbd(pick("위에서 아래 순서로 계산돼요(스택). 순서는 패널 머리를 끌어서, 또는 ⌄ › Move to First/Last.", "They are evaluated top to bottom (the stack). Reorder by dragging the panel header, or ⌄ › Move to First/Last.")) + "</li><li>" +
     kbd(pick("확정(Apply): 패널 위에 마우스 → Ctrl+A, 또는 패널 오른쪽 ⌄ › Apply. 지우기: 패널 위에 마우스 → X (또는 Delete), 또는 패널 머리의 X 버튼. 복제: 패널 위 Shift+D. 패널 위 Shift+A = Add Modifier 메뉴.", "Apply: hover the panel → Ctrl+A, or the panel's ⌄ › Apply. Delete: hover the panel → X (or Delete), or the X button in the panel header. Duplicate: Shift+D over the panel. Shift+A over the panels = Add Modifier menu.")) + "</li><li>" +
     kbd(pick("Boolean 커터 숨기기: 커터 선택 → H (Alt+H로 다시), 또는 Object 탭(주황 네모) › Viewport Display › Display As: Wire / Bounds, 렌더에서 빼기: Object 탭 › Visibility › Renders 해제.", "Hide a Boolean cutter: select it → H (Alt+H to unhide), or Object tab (orange square) › Viewport Display › Display As: Wire / Bounds; exclude from render: Object tab › Visibility › uncheck Renders.")) + "</li><li>" +
     kbd(pick("5.3 주의: Generate › 'Array'는 Geometry Nodes 버전이고 기존 모디파이어는 'Array (Legacy)'예요. 예제는 Legacy를 씁니다.", "5.3 note: Generate › 'Array' is the Geometry Nodes version; the classic modifier is 'Array (Legacy)'. The examples use Legacy.")) + "</li></ol>";
   h += '<table class="keys mods"><thead><tr><th>' + esc(pick("모디파이어", "Modifier")) + "</th><th>" + esc(pick("Add Modifier 경로", "Add Modifier path")) + "</th><th>" + esc(pick("주로 바꾸는 값", "Key fields")) + "</th></tr></thead><tbody>" +
-    G.mods.map(function(m){ return "<tr><th>" + esc(m[2]) + "</th><td>" + esc((m[1] ? m[1] + " › " : "") + m[2]) + "</td><td>" + esc(pick(m[3], m[4])) + "</td></tr>"; }).join("") + "</tbody></table>";
-  S.innerHTML = h;
+    G.mods.map(function(m){ return "<tr><th>" + esc(m[2]) + "</th><td>" + esc((m[1] ? m[1] + " › " : "") + m[2]) + "</td><td>" + esc(pick(m[3], m[4])) + "</td></tr>"; }).join("") + "</tbody></table></details>";
+  S.innerHTML = h; window.KEYS.render($("#kroot"));
 }
 function renderExample(S, id){
   var m = D.models.filter(function(x){ return x.id === id; })[0]; if(!m){ location.hash = "#model/examples"; return; }
@@ -336,7 +333,7 @@ function renderStart(S, id){
     return '<li><div class="stxt"><b>' + (i + 1) + ".</b> " + esc(lab(s_)) + "</div>" + howHTML(x.howto[i]) + (im ? '<figure class="shot" data-lb="' + x.id + '" data-src="' + im.src + '" data-cap="' + esc((i + 1) + ". " + lab(s_)) + '"><img loading="lazy" src="' + im.th + '" alt=""></figure>' : "") + "</li>";
   }).join("") + "</ol>";
   if(rend) h += '<figure class="shot final" data-lb="' + x.id + '" data-src="' + rend.src + '" data-cap="' + esc(t("final")) + '"><img loading="lazy" src="' + rend.th + '" alt=""><figcaption>' + esc(t("final")) + " (Cycles)</figcaption></figure>";
-  h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" id="stcopy">📋 ' + esc(t("full_code")) + '</button></div><pre class="code small"><code>' + hl(x.code) + "</code></pre></div></article>";
+  h += '<div class="codehead"><b>' + esc(t("code")) + '</b><button class="copybtn" id="stcopy">📋 ' + esc(t("full_code")) + '</button></div>' + (window.BSA_ADDON_HINT ? window.BSA_ADDON_HINT() : "") + '<pre class="code small"><code>' + hl(x.code) + "</code></pre></div></article>";
   S.innerHTML = h;
   $("#stcopy").onclick = function(){ copy(D.start_prelude + "\n" + x.code, this); };
   bindLB(S);

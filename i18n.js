@@ -3,7 +3,7 @@ var L = (new URLSearchParams(location.search).get("lang") || (function(){ try { 
 try { localStorage.setItem("bsa.lang", L); } catch(e){}
 var T = {
  title: ["블렌더 스크립트 & 모델링 도우미", "Blender Script & Modeling Helper"],
- tab_scripts: ["스크립트 사전", "Script dictionary"], tab_model: ["모델링 도우미", "Modeling helper"],
+ tab_scripts: ["스크립트 사전", "Script dictionary"], tab_model: ["모델링 도우미", "Modeling helper"], tab_addon: ["🧩 애드온", "🧩 Add-on"],
  sub_plan: ["📷 사진으로 모델링 계획", "📷 Image → modeling plan"], sub_examples: ["🧩 예제 (두 가지 방법)", "🧩 Worked examples (two methods)"], sub_gallery: ["➕ 추가 메뉴(Shift+A) 갤러리", "➕ Add menu (Shift+A) gallery"],
  search: ["검색 (예: 이름, 머티리얼, 렌더, 애니메이션…)", "Search (e.g. rename, material, render, keyframe…)"],
  all: ["전체", "All"], level: ["난이도", "Difficulty"], category: ["분류", "Category"], results: ["개", "results"],
@@ -24,7 +24,7 @@ var T = {
  acc_title: ["정확도 (솔직하게)", "Accuracy (honestly)"], ai_title: ["🤖 AI로 분석하기 (선택)", "🤖 Analyse with AI (optional)"],
  gallery_intro: ["Blender 5.3의 Shift+A(추가) 메뉴에 있는 모든 항목을 실제로 하나씩 추가해서 찍은 화면이에요. 각 항목이 어디에 좋은지 함께 적었어요.", "Every item of the Shift+A (Add) menu in Blender 5.3, added one by one and captured from the real viewport, with what each is good for."],
  menu_shots: ["실제 Shift+A 메뉴 화면", "The real Shift+A menu"], prims: ["시작 도형", "Starting primitives"], open_example: ["예제 열기 →", "Open example →"],
- step: ["단계", "Step"], how: ["어떻게? (모드·키·메뉴·값)", "How? (mode · keys · menu · values)"], sub_keys: ["⌨️ 단축키·메뉴 사전", "⌨️ Shortcuts & menus"], sub_starts: ["🌀 시작 타입별 예제 (Shift+A)", "🌀 By start type (Shift+A)"], notdone: ["실패", "failed"], lvl_names: [["", "입문", "기초", "중급", "고급", "전문"], ["", "Beginner", "Basic", "Intermediate", "Advanced", "Expert"]]
+ step: ["단계", "Step"], how: ["어떻게? (모드·키·메뉴·값)", "How? (mode · keys · menu · values)"], sub_keys: ["⌨️ 단축키 검색", "⌨️ Shortcut search"], sub_starts: ["🌀 시작 타입별 예제 (Shift+A)", "🌀 By start type (Shift+A)"], notdone: ["실패", "failed"], lvl_names: [["", "입문", "기초", "중급", "고급", "전문"], ["", "Beginner", "Basic", "Intermediate", "Advanced", "Expert"]]
 };
 var CAT = {naming: ["이름 정리", "Naming"], select: ["선택", "Selection"], transform: ["배치·변형", "Transform"], mesh: ["메시 편집", "Mesh"], modifier: ["모디파이어", "Modifiers"],
  material: ["머티리얼", "Materials"], light: ["조명", "Lighting"], camera: ["카메라", "Camera"], render: ["렌더", "Render"], anim: ["애니메이션", "Animation"], io: ["가져오기·내보내기", "Import/Export"],

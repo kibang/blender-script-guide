@@ -196,3 +196,46 @@ section.gterm p.gused a{margin-right:.35em}
 .rsel select{max-width:100%;margin-left:4px;padding:3px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px}
 .rplan{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}.okc{color:#7bd88f}.tiny{font-size:11.5px}
 .shapefb>summary{cursor:pointer;color:var(--mut);margin:8px 0}.credits{font-size:12px;opacity:.85}
+
+/* add-on tab */
+.addon .dl{display:inline-block;margin:4px 8px 4px 0;text-decoration:none}.addon .dl:hover{text-decoration:none;filter:brightness(1.08)}
+.addon-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:26px;align-items:start}
+.addon-txt h2,.addon-shots h2{font-size:19px;margin:20px 0 6px}.addon-txt ol,.addon-txt ul{padding-left:22px;margin:4px 0 8px}.addon-txt li{margin:4px 0;overflow-wrap:anywhere}
+.addon-shots .shots{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.addon-shots figure{margin:0}.addon-shots img{width:auto;max-width:100%;max-height:520px;height:auto;margin:0 auto;display:block;border-radius:8px;border:1px solid var(--line)}
+.addon-shots figcaption{font-size:13px;color:var(--mut);margin-top:4px}
+.addon-hint{margin:0 0 8px;font-size:13px;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:5px 10px;overflow-wrap:anywhere}
+@media(max-width:980px){.addon-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:520px){.tabs{flex-wrap:wrap}.tabs a{padding:6px 10px}}
+
+/* ---- Blender shortcut search (keys.js) ---- */
+.kbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.6rem 0}
+.kbar input{flex:1 1 260px;min-width:0;font-size:1rem;padding:.6rem .75rem;border-radius:var(--r);border:1px solid var(--line);background:var(--panel);color:var(--text)}
+.kos{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex:0 0 auto}
+.kos button{background:transparent;color:var(--mut);border:0;padding:.45rem .8rem;font:inherit;font-size:.85rem;cursor:pointer}
+.kos button.on{background:var(--acc);color:#111;font-weight:600}
+.kfil{display:flex;flex-wrap:wrap;gap:.4rem .9rem;align-items:center;font-size:.88rem;margin-bottom:.3rem}
+.kfil label{display:inline-flex;gap:.35rem;align-items:center;min-width:0;max-width:100%}
+.kfil select{max-width:min(62vw,320px);min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:.3rem .4rem;font:inherit}
+.klist{list-style:none;margin:.3rem 0;padding:0}
+.kr{display:grid;grid-template-columns:minmax(150px,30%) 1fr;gap:.35rem .9rem;padding:.55rem .3rem;border-bottom:1px solid var(--line);min-width:0}
+.kc{min-width:0;overflow-wrap:anywhere}.kc kbd{margin:.08rem 0}
+.kp{color:var(--mut);margin:0 .15rem;font-size:.8em}
+.kv{display:inline-block;color:var(--acc2);font-size:.78rem;margin-left:.2rem}
+.kalt{color:var(--mut);font-size:.74rem;margin-top:.15rem}
+.kn{min-width:0;overflow-wrap:anywhere}.kn b{font-weight:600}
+.ks{color:var(--mut);font-size:.85rem}
+.kd{color:var(--mut);font-size:.82rem;margin-top:.15rem}
+.km{font-size:.78rem;color:var(--mut);margin-top:.25rem;overflow-wrap:anywhere}
+.km .ked{color:var(--text)}
+.km code{font-size:.74rem;background:var(--panel2);padding:0 .3rem;border-radius:4px;word-break:break-all}
+.km code.pr{color:#c9b4ff}
+.tag{display:inline-block;font-size:.68rem;padding:0 .35rem;border-radius:999px;border:1px solid var(--line);color:var(--mut);vertical-align:middle;white-space:nowrap}
+.tag.new{border-color:var(--ok);color:var(--ok)}.tag.chg{border-color:var(--acc);color:var(--acc)}.tag.man{border-color:#8a8f99}.tag.mod{border-color:var(--acc2);color:var(--acc2)}
+.kmore{display:block;margin:.8rem auto;padding:.55rem 1.2rem;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;cursor:pointer}
+.kempty{padding:1rem .3rem;color:var(--mut)}
+.kmore[hidden]{display:none}
+.km code{display:inline-block;max-width:100%;margin:.1rem .15rem 0 0;vertical-align:middle}
+.krem,.modfold{margin:1rem 0;border:1px solid var(--line);border-radius:var(--r);padding:.5rem .8rem}
+.krem summary,.modfold summary{cursor:pointer;font-weight:600}
+.ksrc{margin-top:1rem}
+@media(max-width:600px){.kr{grid-template-columns:1fr;gap:.2rem}.kfil label{width:100%}.kfil select{flex:1;max-width:none}}
